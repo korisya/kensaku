@@ -9,11 +9,18 @@ var msMinute = 60*1000;
 var msHour = 60*60*1000;
 // Set the session cookie
 let cookie = new tough.Cookie({
-    key: "M573SSID",
-    value: "", // paste cookie value here
-    domain: 'p.eagate.573.jp',
-    httpOnly: true,
-    maxAge: 31536000
+	key: "M573SSID",
+	value: "", // paste cookie value here
+	domain: 'p.eagate.573.jp',
+	httpOnly: true,
+	maxAge: 31536000
+});
+let cookie2 = new tough.Cookie({
+	key: "M573SSID",
+	value: "", //
+	domain: 'p.eagate.573.jp',
+	httpOnly: true,
+	maxAge: 31536000
 });
 var cookiejar = rp.jar();
 cookiejar.setCookie(cookie, 'https://p.eagate.573.jp');
@@ -33,16 +40,16 @@ var playerNames = [];
 var playerDates = [];
 async function getData() {
 	let result = await rp(options)
-	    .then(($) => {
-		    // Parses data
-		    for (var i = 1; i < $('.dancer_name').get().length - 10; i++) { // i = 1 because first value isn't a player name
+		.then(($) => {
+			// Parses data
+			for (var i = 1; i < $('.dancer_name').get().length - 10; i++) { // i = 1 because first value isn't a player name
 				playerNames[i-1] = $('.dancer_name').eq(i).text();
 				playerDates[i-1] = date;
 				console.log('Boot success');
-		    }
+			}
 			firstRetrieval = false;
-	    })
-	    .catch((err) => {
+		})
+		.catch((err) => {
 			console.log(err);
 	});
 }
@@ -55,13 +62,12 @@ async function getCurrentData() {
 	}
 }
 
-
 // Retrieves new data every minute
 async function retrieveData() {
 	var tempPlayerData = [];
 	// Gets data
 	let result = await rp(options)
-	    .then(($) => {
+		.then(($) => {
 			// !! if someone logs in to another machine, they will still be on this list !!
 			// if the first two players are different
 			if (playerNames[0] !== $('.dancer_name').eq(1).text() && playerNames[0] !== $('.dancer_name').eq(2).text()) {
@@ -96,7 +102,7 @@ async function retrieveData() {
 				}
 				
 			}
-		    // else, if the first player is different
+			// else, if the first player is different
 			else if (playerNames[0] !== $('.dancer_name').eq(1).text()) {
 				var popIndex = 1;
 				// moves player info 1 place down each array
@@ -123,40 +129,40 @@ async function retrieveData() {
 				}
 			}
 			console.log("Data received");
-		    setTimeout(retrieveData, 60000);
-	    }).catch((err) => {
+			setTimeout(retrieveData, 60000);
+		}).catch((err) => {
 			console.log(err);
-	  });
+	});
 }
 
 // Configure logger settings
 logger.remove(logger.transports.Console);
 logger.add(new logger.transports.Console, {
-    colorize: true
+	colorize: true
 });
 logger.level = 'debug';
 
 // Initialize Discord Bot
 var bot = new Discord.Client({
-    token: auth.token,
-    autorun: true
+	token: auth.token,
+	autorun: true
 });
 bot.on('ready', function (evt) {
-    logger.info('Connected');
-    logger.info('Logged in as: ');
-    logger.info(bot.username + ' - (' + bot.id + ')');
+	logger.info('Connected');
+	logger.info('Logged in as: ');
+	logger.info(bot.username + ' - (' + bot.id + ')');
 });
 bot.on('message', function (user, userID, channelID, message, evt) {
-    // Our bot needs to know if it will execute a command
-    // It will listen for messages that will start with `!`
-    if (message.substring(0, 1) == '!') {
-        var args = message.substring(1).split(' ');
-        var cmd = args[0];
-        
-        args = args.splice(1);
-        switch(cmd) {
-            // !ping
-            case 'ping':
+	// Our bot needs to know if it will execute a command
+	// It will listen for messages that will start with `!`
+	if (message.substring(0, 1) == '!') {
+		var args = message.substring(1).split(' ');
+		var cmd = args[0];
+
+		args = args.splice(1);
+		switch(cmd) {
+			// !ping
+			case 'ping':
 				var output = 'Times are given in PT\n';
 				getCurrentData().then(() => {
 					var currentTime = new Date();
@@ -173,8 +179,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 				}).catch(err => {
 					console.log(err);
 				});
-            break;
-            // Just add any case commands if you want to..
-         }
-     }
+			break;
+			// Just add any case commands if you want to..
+		}
+	}
 });
