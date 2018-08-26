@@ -15,13 +15,6 @@ let cookie = new tough.Cookie({
 	httpOnly: true,
 	maxAge: 31536000
 });
-let cookie2 = new tough.Cookie({
-	key: "M573SSID",
-	value: "", //
-	domain: 'p.eagate.573.jp',
-	httpOnly: true,
-	maxAge: 31536000
-});
 var cookiejar = rp.jar();
 cookiejar.setCookie(cookie, 'https://p.eagate.573.jp');
 
