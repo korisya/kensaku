@@ -1,12 +1,12 @@
 {
   "name": "kensaku-bot",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Lists recent players at a location.",
   "main": "bot.js",
   "author": "t3a",
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
-    "discord.io": "github:woor/discord.io#gateway_v6",
+    "discord.io": "^2.5.3",
     "request": "^2.88.0",
     "request-promise": "^4.2.2",
     "tough-cookie": "^2.4.3",
