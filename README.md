@@ -10,9 +10,11 @@ For the bot to actually run.
 
 `npm install` in the main folder.
 
-### Necessary code
+### Input cookies and bot token
 
-The cookie values (lines 165-169) and bot token (line 244) must be added to bot.js.
+There are two ways to add the cookies and bot token to the program:
+1. Create a new file, `secret.txt`. Paste the bot token first, and then each cookie, all separated by a space. Within `bot.js`, the token will be `secrets[0]`, the first cookie will be `secrets[1]`, the second cookie will be `secrets[2]`, and so on.
+2. Add the cookie values (lines 224-228) and bot token (line 303) to `bot.js`. Remove lines 7-13 in `bot.js`.
 
 ## Commands
 
@@ -24,7 +26,7 @@ Typing `!whose` in Discord should yield the recent players of that location. For
 
 2. Currently, the code already has 4 locations: Milpitas, San Jose, Daly City, and Concord. San Jose has two machines, and each machine is represented by a separate Location object.
 
-3. Code for outputting each machine location has to be added manually. For example, if the channel from which the bot is called is called `#dnb-milpitas` and `milpitas` is the Location object, then this code should be added after line 192 in bot.js:
+3. Code for outputting each machine location has to be added manually. For example, if the channel from which the bot is called is called `#dnb-milpitas` and `milpitas` is the Location object, then this code should be added after line 251 in `bot.js`:
 ```javascript
 case 'dnb-milpitas':
   message.channel.send({embed:{
@@ -61,9 +63,16 @@ case 'round1-sanjose':
   }
   break;
 ```
-5. `getCurrentData(loc)` should be called for every Location `loc` when the bot starts (see lines 178-182)
+5. `getCurrentData(loc)` should be called for every Location `loc` when the bot starts (see lines 237-241 in `bot.js`).
+
+## Bugs
+* Sometimes the bot will output players with blank names.
 
 ## Changelog
+* v0.3.2
+  * Can now input bot token and cookies through `secret.txt`
+  * Only lists players who logged in on the current day (new day starts at 4 am)
+  * Lists the time a player starts their session
 * v0.3.0
   * Uses `discord.js` instead of `discord.io`
   * Removed a lot of useless code

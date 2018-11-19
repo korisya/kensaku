@@ -1,6 +1,6 @@
 {
   "name": "kensaku-bot",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "A DDR A machine-stalking bot.",
   "main": "bot.js",
   "author": "t3a",
