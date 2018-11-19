@@ -93,9 +93,49 @@ async function retrieveData(loc) {
 	console.log(loc.name + ': Retrieving data...');
 	await rp(loc.options)
 		.then(($) => {
-			// !! if someone logs in to another machine, they will still be on this list !!
-			// if the first two players are different
-			if (loc.playerNames[0] !== $('.dancer_name').eq(1).text() && loc.playerNames[0] !== $('.dancer_name').eq(2).text() || loc.playerNames[1] !== $('.dancer_name').eq(1).text() && loc.playerNames[1] !== $('.dancer_name').eq(2).text()) {
+			// if the previous first player shifted down a spot
+			if (loc.playerNames[0] !== $('.dancer_name').eq(1).text() && loc.playerNames[0] ===  $('.dancer_name').eq(2).text()) {
+				var popIndex = 1;
+
+				// moves player info 1 place down each array
+				for (var i = loc.playerNames.length; i > 0; i--) {
+					loc.playerNames[i] = loc.playerNames[i-1];
+					loc.playerDates[i] = loc.playerDates[i-1];
+				}
+
+				// add the new info to the beginning of the arrays
+				loc.playerNames[0] = $('.dancer_name').eq(1).text();
+				loc.playerDates[0] = currentTime;
+
+				// checks whether this is the start of a player's session. if true, appends them to sandList
+				var newSession0 = true;
+				for (var j = 0; j < loc.sandList.length; j++) {
+					if (loc.playerNames[0] === loc.sandList[j]) {
+						newSession0 = false;
+						break;
+					}
+				}
+				if (newSession0) {
+					loc.sandList[loc.sandList.length] = loc.playerNames[0];
+					loc.sandTime[loc.sandTime.length] = currentTime;
+				}
+
+				// removes duplicates
+				for (var i = 1; i < loc.playerNames.length; i++) {
+					if (loc.playerNames[0] === loc.playerNames[i]) {
+						loc.playerNames.splice(i, 1); // removes value of array at i
+						loc.playerDates.splice(i, 1);
+						popIndex -= 1; // because one value was removed, the list needs to be shortened one less value
+					}
+				}
+
+				// removes players off the end of the list
+				for (var i = 0; i < popIndex; i++) {
+					loc.playerNames.pop();
+					loc.playerDates.pop();
+				}
+			} // else, if the first two players are different in any way
+			else if (!(loc.playerNames[0] === $('.dancer_name').eq(1).text() && loc.playerNames[1] === $('.dancer_name').eq(2).text())) {
 				var popIndex = 2; // popIndex indicates the number of times to call the pop() method
 
 				// move player info 2 places down the arrays
@@ -148,48 +188,6 @@ async function retrieveData(loc) {
 					loc.playerDates.pop();
 				}
 
-			}
-			// else, if the first player is different
-			else if (loc.playerNames[0] !== $('.dancer_name').eq(1).text()) {
-				var popIndex = 1;
-
-				// moves player info 1 place down each array
-				for (var i = loc.playerNames.length; i > 0; i--) {
-					loc.playerNames[i] = loc.playerNames[i-1];
-					loc.playerDates[i] = loc.playerDates[i-1];
-				}
-
-				// add the new info to the beginning of the arrays
-				loc.playerNames[0] = $('.dancer_name').eq(1).text();
-				loc.playerDates[0] = currentTime;
-
-				// checks whether this is the start of a player's session. if true, appends them to sandList
-				var newSession0 = true;
-				for (var j = 0; j < loc.sandList.length; j++) {
-					if (loc.playerNames[0] === loc.sandList[j]) {
-						newSession0 = false;
-						break;
-					}
-				}
-				if (newSession0) {
-					loc.sandList[loc.sandList.length] = loc.playerNames[0];
-					loc.sandTime[loc.sandTime.length] = currentTime;
-				}
-
-				// removes duplicates
-				for (var i = 1; i < loc.playerNames.length; i++) {
-					if (loc.playerNames[0] === loc.playerNames[i]) {
-						loc.playerNames.splice(i, 1); // removes value of array at i
-						loc.playerDates.splice(i, 1);
-						popIndex -= 1; // because one value was removed, the list needs to be shortened one less value
-					}
-				}
-
-				// removes players off the end of the list
-				for (var i = 0; i < popIndex; i++) {
-					loc.playerNames.pop();
-					loc.playerDates.pop();
-				}
 			}
 			console.log(loc.name + ": Data received");
 			setTimeout(function() {
