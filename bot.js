@@ -95,7 +95,7 @@ async function retrieveData(loc) {
 		.then(($) => {
 			// !! if someone logs in to another machine, they will still be on this list !!
 			// if the first two players are different
-			if (loc.playerNames[0] !== $('.dancer_name').eq(1).text() && loc.playerNames[0] !== $('.dancer_name').eq(2).text()) {
+			if (loc.playerNames[0] !== $('.dancer_name').eq(1).text() && loc.playerNames[0] !== $('.dancer_name').eq(2).text() || loc.playerNames[1] !== $('.dancer_name').eq(1).text() && loc.playerNames[1] !== $('.dancer_name').eq(2).text()) {
 				var popIndex = 2; // popIndex indicates the number of times to call the pop() method
 
 				// move player info 2 places down the arrays
@@ -138,6 +138,7 @@ async function retrieveData(loc) {
 						loc.playerNames.splice(i, 1);
 						loc.playerDates.splice(i, 1);
 						popIndex -= 1;
+						i--;
 					}
 				}
 
