@@ -18,7 +18,7 @@ There are two ways to add the cookies and bot token to the program:
 
 ## Commands
 
-Typing `!whose` in Discord should yield the recent players of that location. For example, typing `!whose` in `#dnb-milpitas` should list the players who have logged in at Milpitas within the past 15 hours, up to 10 players.
+Typing `!whose` in Discord should yield the recent players of that location. For example, typing `!whose` in `#dnb-milpitas` should list the players who have logged in at Milpitas today, up to 20 players.
 
 ## Adding more locations
 
@@ -73,6 +73,7 @@ case 'round1-sanjose':
   * Can now input bot token and cookies through `secret.txt`
   * Only lists players who logged in on the current day (new day starts at 4 am)
   * Lists the time a player starts their session
+  * Max 20 players instead of 10
 * v0.3.0
   * Uses `discord.js` instead of `discord.io`
   * Removed a lot of useless code
