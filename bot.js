@@ -2,25 +2,30 @@ var Discord = require('discord.js');
 var rp = require('request-promise');
 var tough = require('tough-cookie');
 const cheerio = require('cheerio');
-var fs = require('fs');
-
-// -----------Remove if you want to paste the cookies and tokens into the code itself.-----------
-console.log('Finding cookies and cream:');
-var secrets = fs.readFileSync('secret.txt', {encoding: 'utf8'}).trim().split(' ');
-console.log('cream: ' + secrets[0]);
-for (var i = 1; i < secrets.length; i++)
-	console.log('cookie ' + i + ': ' + secrets[i]);
-// ----------------------------------------------------------------------------------------------
+require('http').createServer().listen(3000);
+require('dotenv').config();
 
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
 
-// Constructor for locations
-function Location (val, name) {
-	this.name = name;
+// Constructor for Players
+function Player (dancerName, ddrCode, locName) {
+	this.name = dancerName;
+	this.ddrCode = ddrCode;
+
+	this.firstTime = new Date();
+	this.lastTime = new Date();
+
+	this.location = locName;
+}
+
+// Constructor for cabs
+function Cab (cookie) {
+	this.players = [];
+	this.newPlayers = [];
 	this.cookie = new tough.Cookie({
 		key: "M573SSID",
-		value: val,
+		value: cookie,
 		domain: 'p.eagate.573.jp',
 		httpOnly: true,
 		maxAge: 31536000
@@ -33,30 +38,47 @@ function Location (val, name) {
 		transform: function (body) {
 			return cheerio.load(body);
 	}};
-
-	this.playerNames = [];
-	this.playerDates = [];
-	this.sandList = [];
-	this.sandTime = [];
+	this.prunedPlayers = 0;
+}
+// Constructor for locations
+function Location (cabs, name) {
+	this.name = name;
+	this.cabs = cabs;
+	this.todaysPlayers = [];
 
 	this.getOutput = function () {
 		var currentTime = new Date();
 		var output = '';
-		for (var i = 0; i < this.playerNames.length; i++) {
-			for (var j = 0; j < this.sandList.length; j++) {
-				if (this.sandList[j] === this.playerNames[i]) {
-					var hr = Math.floor((currentTime - this.playerDates[i]) / msHour);
-					var min = Math.floor(((currentTime - this.playerDates[i]) % msHour) / msMinute);
+		for (var i = 0; i < this.todaysPlayers.length; i++) {
+			var hr = Math.floor((currentTime - this.todaysPlayers[i].lastTime) / msHour);
+			var min = Math.floor(((currentTime - this.todaysPlayers[i].lastTime) % msHour) / msMinute);
 
-					output += this.playerNames[i]
-					for (var k = this.playerNames[i].length; k < 8; k++)
-						output += ' ';
+			if (hr < 2) {
+				output += this.todaysPlayers[i].name;
+				for (var k = this.todaysPlayers[i].name.length; k < 8; k++)
+					output += ' ';
 
-					output += '   ' + this.sandTime[j].toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-					output += '   Seen ' + hr + 'h ' + min +  'm ago\n';
-					break;
-				}
+				output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+				output += '   Seen ' + hr + 'h ' + min +  'm ago\n';
 			}
+		}
+		return output || ' ';
+	};
+
+	this.getAll = function () {
+		var currentTime = new Date();
+		var output = '';
+		for (var i = 0; i < this.todaysPlayers.length; i++) {
+			var hr = Math.floor((this.todaysPlayers[i].lastTime - this.todaysPlayers[i].firstTime) / msHour);
+			var min = Math.floor(((this.todaysPlayers[i].lastTime - this.todaysPlayers[i].firstTime) % msHour) / msMinute);
+
+			output += this.todaysPlayers[i].name;
+			for (var k = this.todaysPlayers[i].name.length; k < 8; k++)
+				output += ' ';
+
+			output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+			output += ' - ' + this.todaysPlayers[i].lastTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+			output += '   (' + hr + 'h ' + min + 'm)\n';
 		}
 		return output || ' ';
 	};
@@ -64,167 +86,201 @@ function Location (val, name) {
 
 // Gets initial data
 async function getInitialData(loc) {
-	await rp(loc.options)
-		.then(($) => {
-			var date = new Date();
-			// Parses data
-			for (var i = 1; i < $('.dancer_name').get().length; i++) { // i = 1 because first value isn't a player name
-				loc.playerNames[i-1] = $('.dancer_name').eq(i).text();
-				loc.playerDates[i-1] = date;
-				console.log(loc.name + ': Player ' + i + ' received - ' + loc.playerNames[i-1]);
-			}
-
-			setTimeout(function() {
-				retrieveData(loc) }, 60000);
-		})
-		.catch((err) => {
-			console.log(err);
+	loc.cabs.forEach(async function(cab) {
+		await rp(cab.options).then(($) => {
+				// Parses data
+				for (var i = 1; i < $('.dancer_name').get().length - 15; i++) { // i = 1 because first value isn't a player name
+					cab.players[i-1] = new Player($('.dancer_name').eq(i).text(), $('.code').eq(i).text(), loc.name);
+					console.log('--> ' + loc.name + ': Player ' + i + ' received - ' + cab.players[i-1].name + ' ' + cab.players[i-1].ddrCode);
+				}
+			}).catch((err) => {
+				console.log(err);
+				console.log('--> Failed to get initial data. Restart the bot.')
+		});
 	});
+	setTimeout(function() {
+		retrieveData(loc)
+	}, 60000);
 }
 
 // Retrieves new data every minute
 async function retrieveData(loc) {
 	var currentTime = new Date();
-	if (currentTime.getHours() == 4 && loc.sandList.length != 0) {
-		loc.sandList = [];
-		loc.sandTime = [];
+	if (currentTime.getHours() == 4 && loc.todaysPlayers.length != 0) {
+		loc.todaysPlayers = [];
 	}
 
-	console.log(loc.name + ': Retrieving data...');
-	await rp(loc.options)
-		.then(($) => {
-			// if the previous first player shifted down a spot
-			if (loc.playerNames[0] !== $('.dancer_name').eq(1).text() && loc.playerNames[0] ===  $('.dancer_name').eq(2).text()) {
-				var popIndex = 1;
+	console.log('--> ' + loc.name + ': Retrieving data...');
 
-				// moves player info 1 place down each array
-				for (var i = loc.playerNames.length; i > 0; i--) {
-					loc.playerNames[i] = loc.playerNames[i-1];
-					loc.playerDates[i] = loc.playerDates[i-1];
-				}
-
-				// add the new info to the beginning of the arrays
-				loc.playerNames[0] = $('.dancer_name').eq(1).text();
-				loc.playerDates[0] = currentTime;
-
-				// checks whether this is the start of a player's session. if true, appends them to sandList
-				var newSession0 = true;
-				for (var j = 0; j < loc.sandList.length; j++) {
-					if (loc.playerNames[0] === loc.sandList[j]) {
-						newSession0 = false;
-						break;
-					}
-				}
-				if (newSession0) {
-					loc.sandList[loc.sandList.length] = loc.playerNames[0];
-					loc.sandTime[loc.sandTime.length] = currentTime;
-				}
-
-				// removes duplicates
-				for (var i = 1; i < loc.playerNames.length; i++) {
-					if (loc.playerNames[0] === loc.playerNames[i]) {
-						loc.playerNames.splice(i, 1); // removes value of array at i
-						loc.playerDates.splice(i, 1);
-						popIndex -= 1; // because one value was removed, the list needs to be shortened one less value
-					}
-				}
-
-				// removes players off the end of the list
-				for (var i = 0; i < popIndex; i++) {
-					loc.playerNames.pop();
-					loc.playerDates.pop();
-				}
-			} // else, if the first two players are different in any way
-			else if (!(loc.playerNames[0] === $('.dancer_name').eq(1).text() && loc.playerNames[1] === $('.dancer_name').eq(2).text())) {
-				var popIndex = 2; // popIndex indicates the number of times to call the pop() method
-
-				// move player info 2 places down the arrays
-				for (var i = loc.playerNames.length; i > 0; i--) {
-					loc.playerNames[i+1] = loc.playerNames[i-1];
-					loc.playerDates[i+1] = loc.playerDates[i-1];
-				}
-
-				// add the new info to the beginning of the arrays
-				loc.playerNames[0] = $('.dancer_name').eq(1).text();
-				loc.playerNames[1] = $('.dancer_name').eq(2).text();
-				loc.playerDates[0] = currentTime;
-				loc.playerDates[1] = currentTime;
-
-				// checks if this is the start of a player's session. if true, initialize their start time
-				var newSession0 = true, newSession1 = true;
-				for (var j = 0; j < loc.sandList.length; j++) {
-					if (loc.playerNames[0] === loc.sandList[j])
-						newSession0 = false;
-					else if (loc.playerNames[1] === loc.sandList[j])
-						newSession1 = false;
-				}
-				if (newSession0) {
-					loc.sandList[loc.sandList.length] = loc.playerNames[0];
-					loc.sandTime[loc.sandTime.length] = currentTime;
-				}
-				if (newSession1) {
-					loc.sandList[loc.sandList.length] = loc.playerNames[1];
-					loc.sandTime[loc.sandTime.length] = currentTime;
-				}
-
-				// removes duplicates
-				for (var i = 2; i < loc.playerNames.length; i++) {
-					if (loc.playerNames[0] === loc.playerNames[i]) {
-						loc.playerNames.splice(i, 1); // removes value of array at i
-						loc.playerDates.splice(i, 1);
-						popIndex -= 1; // because one value was removed, the list needs to be shortened one less value
-					}
-					if (loc.playerNames[1] === loc.playerNames[i]) {
-						loc.playerNames.splice(i, 1);
-						loc.playerDates.splice(i, 1);
-						popIndex -= 1;
-						i--;
-					}
-				}
-
-				// removes players off the end of the list
-				for (var i = 0; i < popIndex; i++) {
-					loc.playerNames.pop();
-					loc.playerDates.pop();
-				}
-
+	for (var i = 0; i < loc.cabs.length; i++) {
+		await rp(loc.cabs[i].options).then(($) => {
+			if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
+				setTimeout(function() {
+					retrieveData(loc)
+				}, 60000);
+				return;
 			}
-			console.log(loc.name + ": Data received");
-			setTimeout(function() {
-				retrieveData(loc) }, 60000);
+			loc.cabs[i].newPlayers[0] = new Player($('.dancer_name').eq(1).text(), $('.code').eq(1).text(), loc.name);
+			loc.cabs[i].newPlayers[1] = new Player($('.dancer_name').eq(2).text(), $('.code').eq(2).text(), loc.name);
+			console.log('--> ' + loc.name + ': Data received');
 		}).catch((err) => {
 			console.log(err);
+			console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data.\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
+		});
+	}
+
+	loc.cabs.forEach(function(cab1) {
+		loc.cabs.forEach(function(cab2) {
+			if (cab1 !== cab2) {
+				cab1.newPlayers.forEach(function(newPlayer) {
+					var foundPlayer = cab2.players.find(function(player) {
+						return player.ddrCode === newPlayer.ddrCode;
+					});
+					if (foundPlayer) {
+						cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
+						cab2.prunedPlayers++;
+					}
+				});
+			}
+		});
 	});
+	loc.cabs.forEach(function(cab) {
+		// if the previous first player shifted down a spot
+		if (cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
+			var incomingPlayer = cab.newPlayers[0];
+
+			// Check for duplicates
+			var foundPlayer = cab.players.find(function(player) {
+				return player.ddrCode === incomingPlayer.ddrCode;
+			});
+
+			// if duplicate, remove and unshift. else unshift and pop
+			if (foundPlayer) {
+				cab.players.splice(cab.players.indexOf(foundPlayer), 1);
+				cab.players.unshift(incomingPlayer);
+			} else {
+				cab.players.unshift(incomingPlayer);
+				if (cab.prunedPlayers > 0) {
+					cab.prunedPlayers--;
+				} else {
+					cab.players.pop();
+				}
+			}
+
+			// find out if the player is on today's list
+			var foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
+				return player.ddrCode === incomingPlayer.ddrCode;
+			});
+
+			// if duplicate, remove and unshift. else unshift
+			if (foundTodaysPlayer) {
+				incomingPlayer.firstTime = foundTodaysPlayer.firstTime;
+				loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer), 1);
+				loc.todaysPlayers.unshift(incomingPlayer);
+			} else {
+				loc.todaysPlayers.unshift(incomingPlayer);
+				pingChannel('+ ' + incomingPlayer.name + '    ' + incomingPlayer.ddrCode, loc.name);
+			}
+			// how are we going to get total session times? yay now it's ez
+		} // else, if the first two players are different in any way
+		else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
+
+			var incomingPlayer0 = cab.newPlayers[0];
+			var incomingPlayer1 = cab.newPlayers[1];
+
+			var foundPlayer0 = cab.players.find(function(player) {
+				return player.ddrCode === incomingPlayer0.ddrCode;
+			});
+			var foundPlayer1 = cab.players.find(function(player) {
+				return player.ddrCode === incomingPlayer1.ddrCode;
+			});
+
+			if (foundPlayer1) {
+				cab.players.splice(cab.players.indexOf(foundPlayer1), 1);
+				cab.players.unshift(incomingPlayer1);
+			} else {
+				cab.players.unshift(incomingPlayer1);
+				if (cab.prunedPlayers > 0) {
+					cab.prunedPlayers--;
+				} else {
+					cab.players.pop();
+				}
+			}
+			if (foundPlayer0) {
+				cab.players.splice(cab.players.indexOf(foundPlayer0), 1);
+				cab.players.unshift(incomingPlayer0);
+			} else {
+				cab.players.unshift(incomingPlayer0);
+				if (cab.prunedPlayers > 0) {
+					cab.prunedPlayers--;
+				} else {
+					cab.players.pop();
+				}
+			}
+
+			var foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
+				return player.ddrCode === incomingPlayer0.ddrCode;
+			});
+			var foundTodaysPlayer1 = loc.todaysPlayers.find(function(player) {
+				return player.ddrCode === incomingPlayer1.ddrCode;
+			});
+
+			var str = '';
+			if (foundTodaysPlayer1) {
+				incomingPlayer1.firstTime = foundTodaysPlayer1.firstTime;
+				loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer1), 1);
+				loc.todaysPlayers.unshift(incomingPlayer1);
+			} else {
+				loc.todaysPlayers.unshift(incomingPlayer1);
+				str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
+			}
+
+			if (foundTodaysPlayer0) {
+				incomingPlayer0.firstTime = foundTodaysPlayer0.firstTime;
+				loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer0), 1);
+				loc.todaysPlayers.unshift(incomingPlayer0);
+			} else {
+				loc.todaysPlayers.unshift(incomingPlayer0);
+				str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
+			}
+
+			if (str !== '') pingChannel(str, loc.name)
+		}
+	});
+	setTimeout(function() {
+		retrieveData(loc)
+	}, 60000);
 }
 
 // Returns a random message from Rinon!
 function getRinonMesssage() {
-	var roll = Math.floor(Math.random() * 4);
+	var roll = Math.floor(Math.random() * 5);
 	var msg;
 	switch(roll) {
 		case 0:
 			msg = "UwU お帰りなさい、ご主人様。これが検索の結果です~";
 			break;
 		case 1:
-			msg = "え…えっ？検索結果を見せてほしい？そ…そんな…恥ずかしいよ…"
+			msg = "え…えっ？検索結果を見せてほしい？そ…そんな…恥ずかしいよ…";
 			break;
 		case 2:
-			msg = "お帰り、お兄ちゃん！ご飯にする？お風呂にする？それとも…　け　ん　さ　く　の　け　っ　か"
+			msg = "お帰り、お兄ちゃん！ご飯にする？お風呂にする？それとも…　け・ん・さ・く・の・け・っ・か";
 			break;
 		case 3:
-			msg = "あ、そうですか。検索結果を見たいですか。見せてあげるわ。"
+			msg = "あ、そうですか。検索結果を見たいですか。見せてあげるわ。";
+			break;
+		case 4:
+			msg = "お兄ちゃん、私の検索結果を見ちゃダメェ…！あっ…見ちゃった…もう兄ちゃんだけとしか結婚できない…お兄ちゃんは責任を取るよね";
 			break;
 	}
 	return msg;
 }
 
-
 // Initalize locations
-var milpitas = new Location(secrets[1], "Milpitas"); // PASTE COOKIE HERE iF NOT USING secret.txt
-var sanJoseJ = new Location(secrets[2], "San Jose J-Cab"); // PASTE COOKIE HERE iF NOT USING secret.txt
-var sanJoseK = new Location(secrets[3], "San Jose K-Cab"); // PASTE COOKIE HERE iF NOT USING secret.txt
-var dalyCity = new Location(secrets[4], "Daly City"); // PASTE COOKIE HERE iF NOT USING secret.txt
-var concord = new Location(secrets[5], "Concord"); // PASTE COOKIE HERE iF NOT USING secret.txt
+var milpitas = new Location([new Cab(process.env.MILPITAS)], 'Milpitas');
+var sanJose = new Location([new Cab(process.env.SANJOSEJ), new Cab(process.env.SANJOSEK)], 'San Jose');
+var dalyCity = new Location([new Cab(process.env.DALYCITY)], 'Daly City');
+var concord = new Location([new Cab(process.env.CONCORD)], 'Concord');
 
 // Initialize Discord Bot
 var bot = new Discord.Client();
@@ -234,17 +290,29 @@ bot.on('ready', () => {
 	console.log(`Logged in as ${bot.user.tag}!`);
 	console.log(bot.user.username + ' - (' + bot.user.id + ')');
 	getInitialData(milpitas);
-	getInitialData(sanJoseJ);
-	getInitialData(sanJoseK);
+	getInitialData(sanJose);
 	getInitialData(dalyCity);
 	getInitialData(concord);
 });
+
+function pingChannel(str, locName) {
+	bot.channels.forEach(function(channel) {
+		if (locName === 'Milpitas' && channel.name === 'dnb-milpitas') {
+			channel.sendCode('javascript', str);
+		} else if (locName === 'Daly City' && channel.name === 'dnb-dalycity') {
+			channel.sendCode('javascript', str);
+		} else if (locName === 'Concord' && channel.name === 'round1-concord') {
+			channel.sendCode('javascript', str);
+		} else if (locName === 'San Jose' && channel.name === 'round1-sanjose') {
+			channel.sendCode('javascript', str);
+		}
+	});
+}
 
 bot.on('message', message => {
 	if (message.content.substring(0, 1) == '!') {
 		var args = message.content.substring(1).split(' ');
 		var cmd = args[0];
-		var subcmd = args[1];
 		var channel = message.channel.name;
 		if (cmd === 'whose') {
 			switch (channel) {
@@ -252,14 +320,65 @@ bot.on('message', message => {
 					message.channel.send({embed:{
 						title: milpitas.name,
 						description: getRinonMesssage() + "\n```" + milpitas.getOutput() + "```",
-						color: 0xFFFFFF,
-						timestamp: new Date()
+						color: 0xFF69B4,
+						timestamp: new Date(),
+						footer: {
+							text: "hella tfti",
+							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
+						}
 					}});
 					break;
 				case 'dnb-dalycity':
 					message.channel.send({embed:{
 						title: dalyCity.name,
 						description: getRinonMesssage() + "\n```" + dalyCity.getOutput() + "```",
+						color: 0xFF69B4,
+						timestamp: new Date(),
+						footer: {
+							text: "hella tfti",
+							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
+						}
+					}});
+					break;
+				case 'round1-concord':
+					message.channel.send({embed:{
+						title: concord.name,
+						description: getRinonMesssage() + "\n```" + concord.getOutput() + "```",
+						color: 0xFF69B4,
+						timestamp: new Date(),
+						footer: {
+							text: "hella tfti",
+							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
+						}
+					}});
+					break;
+				case 'round1-sanjose':
+					message.channel.send({embed:{
+						title: sanJose.name,
+						description: getRinonMesssage() + "\n```" + sanJose.getOutput() + "```",
+						color: 0xFF69B4,
+						timestamp: new Date(),
+						footer: {
+							text: "hella tfti",
+							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
+						}
+					}});
+					break;
+			}
+		} else if (cmd === 'yeet') {
+			switch(channel) {
+				case 'dnb-milpitas':
+					message.channel.send({embed:{
+						title: milpitas.name,
+						description: getRinonMesssage() + "\n```" + milpitas.getAll() + "```",
+						color: 0xFFFFFF,
+						timestamp: new Date(),
+					}});
+					break;
+				case 'dnb-dalycity':
+					message.channel.send({embed:{
+						title: dalyCity.name,
+						description: getRinonMesssage() + "\n```" + dalyCity.getAll() + "```",
 						color: 0xFFFFFF,
 						timestamp: new Date()
 					}});
@@ -267,36 +386,23 @@ bot.on('message', message => {
 				case 'round1-concord':
 					message.channel.send({embed:{
 						title: concord.name,
-						description: getRinonMesssage() + "\n```" + concord.getOutput() + "```",
+						description: getRinonMesssage() + "\n```" + concord.getAll() + "```",
 						color: 0xFFFFFF,
 						timestamp: new Date()
 					}});
 					break;
 				case 'round1-sanjose':
-					switch (subcmd) {
-						case 'jcab':
-						case 'j':
-							message.channel.send({embed:{
-								title: sanJoseJ.name,
-								description: getRinonMesssage() + "\n```" + sanJoseJ.getOutput() + "```",
-								color: 0xFFFFFF,
-								timestamp: new Date()
-							}});
-							break;
-						case 'kcab':
-						case 'k':
-							message.channel.send({embed:{
-								title: sanJoseK.name,
-								description: getRinonMesssage() + "\n```" + sanJoseK.getOutput() + "```",
-								color: 0xFFFFFF,
-								timestamp: new Date()
-							}});
-							break;
-					}
+					message.channel.send({embed:{
+						title: sanJose.name,
+						description: getRinonMesssage() + "\n```" + sanJose.getAll() + "```",
+						color: 0xFFFFFF,
+						timestamp: new Date()
+					}});
 					break;
 			}
+		} else if (cmd == 'help') {
+			message.channel.send('Commands: !whose, !yeet');
 		}
 	}
 });
-
-bot.login(secrets[0]); // PASTE TOKEN HERE iF NOT USING secret.txt
+bot.login(process.env.CLIENT_TOKEN);
