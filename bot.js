@@ -58,7 +58,7 @@ function Location (cabs, name) {
 				for (var k = this.todaysPlayers[i].name.length; k < 8; k++)
 					output += ' ';
 
-				output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+				output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', timeZone: 'America/Los_Angeles'});
 				output += '   Seen ' + hr + 'h ' + min +  'm ago\n';
 			}
 		}
@@ -76,8 +76,8 @@ function Location (cabs, name) {
 			for (var k = this.todaysPlayers[i].name.length; k < 8; k++)
 				output += ' ';
 
-			output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-			output += ' - ' + this.todaysPlayers[i].lastTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+			output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', timeZone: 'America/Los_Angeles'});
+			output += ' - ' + this.todaysPlayers[i].lastTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', timeZone: 'America/Los_Angeles'});
 			output += '   (' + hr + 'h ' + min + 'm)\n';
 		}
 		return output || ' ';
@@ -106,7 +106,7 @@ async function getInitialData(loc) {
 // Retrieves new data every minute
 async function retrieveData(loc) {
 	var currentTime = new Date();
-	if (currentTime.getHours() == 4 && loc.todaysPlayers.length != 0) {
+	if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
 		loc.todaysPlayers = [];
 	}
 
