@@ -17,6 +17,10 @@ function Player (dancerName, ddrCode, locName) {
 	this.lastTime = new Date();
 
 	this.location = locName;
+
+	this.toLocaleString = function () {
+		return this.name + ' ' + this.ddrCode;
+	};
 }
 
 // Constructor for cabs
@@ -89,13 +93,13 @@ async function getInitialData(loc) {
 	loc.cabs.forEach(async function(cab) {
 		await rp(cab.options).then(($) => {
 				// Parses data
-				for (var i = 1; i < $('.dancer_name').get().length - 15; i++) { // i = 1 because first value isn't a player name
+				for (var i = 1; i < $('.dancer_name').get().length - 13; i++) { // i = 1 because first value isn't a player name
 					cab.players[i-1] = new Player($('.dancer_name').eq(i).text(), $('.code').eq(i).text(), loc.name);
-					console.log('--> ' + loc.name + ': Player ' + i + ' received - ' + cab.players[i-1].name + ' ' + cab.players[i-1].ddrCode);
+					console.log('--> ' + loc.name + ': Player ' + i + ' received - ' + cab.players[i-1].toLocaleString());
 				}
 			}).catch((err) => {
-				console.log(err);
 				console.log('--> Failed to get initial data. Restart the bot.')
+				throw err;
 		});
 	});
 	setTimeout(function() {
@@ -115,17 +119,15 @@ async function retrieveData(loc) {
 	for (var i = 0; i < loc.cabs.length; i++) {
 		await rp(loc.cabs[i].options).then(($) => {
 			if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
-				setTimeout(function() {
-					retrieveData(loc)
-				}, 60000);
-				return;
+				console.log('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
+			} else {
+				loc.cabs[i].newPlayers[0] = new Player($('.dancer_name').eq(1).text(), $('.code').eq(1).text(), loc.name);
+				loc.cabs[i].newPlayers[1] = new Player($('.dancer_name').eq(2).text(), $('.code').eq(2).text(), loc.name);
+				console.log('--> ' + loc.name + ': Data received @cab' + (i + 1) + '\n\t> ' + loc.cabs[i].newPlayers.toLocaleString());
 			}
-			loc.cabs[i].newPlayers[0] = new Player($('.dancer_name').eq(1).text(), $('.code').eq(1).text(), loc.name);
-			loc.cabs[i].newPlayers[1] = new Player($('.dancer_name').eq(2).text(), $('.code').eq(2).text(), loc.name);
-			console.log('--> ' + loc.name + ': Data received');
 		}).catch((err) => {
 			console.log(err);
-			console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data.\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
+			console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data. @' + loc.name + '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
 		});
 	}
 
@@ -137,6 +139,7 @@ async function retrieveData(loc) {
 						return player.ddrCode === newPlayer.ddrCode;
 					});
 					if (foundPlayer) {
+						console.log('--> ' + loc.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
 						cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
 						cab2.prunedPlayers++;
 					}
@@ -153,7 +156,7 @@ async function retrieveData(loc) {
 			var foundPlayer = cab.players.find(function(player) {
 				return player.ddrCode === incomingPlayer.ddrCode;
 			});
-
+			console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
 			// if duplicate, remove and unshift. else unshift and pop
 			if (foundPlayer) {
 				cab.players.splice(cab.players.indexOf(foundPlayer), 1);
@@ -166,6 +169,7 @@ async function retrieveData(loc) {
 					cab.players.pop();
 				}
 			}
+			console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
 
 			// find out if the player is on today's list
 			var foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
@@ -180,6 +184,7 @@ async function retrieveData(loc) {
 			} else {
 				loc.todaysPlayers.unshift(incomingPlayer);
 				pingChannel('+ ' + incomingPlayer.name + '    ' + incomingPlayer.ddrCode, loc.name);
+				console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
 			}
 			// how are we going to get total session times? yay now it's ez
 		} // else, if the first two players are different in any way
@@ -195,6 +200,7 @@ async function retrieveData(loc) {
 				return player.ddrCode === incomingPlayer1.ddrCode;
 			});
 
+			console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
 			if (foundPlayer1) {
 				cab.players.splice(cab.players.indexOf(foundPlayer1), 1);
 				cab.players.unshift(incomingPlayer1);
@@ -217,6 +223,7 @@ async function retrieveData(loc) {
 					cab.players.pop();
 				}
 			}
+			console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
 
 			var foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
 				return player.ddrCode === incomingPlayer0.ddrCode;
@@ -233,6 +240,7 @@ async function retrieveData(loc) {
 			} else {
 				loc.todaysPlayers.unshift(incomingPlayer1);
 				str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
+				console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
 			}
 
 			if (foundTodaysPlayer0) {
@@ -242,6 +250,7 @@ async function retrieveData(loc) {
 			} else {
 				loc.todaysPlayers.unshift(incomingPlayer0);
 				str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
+				console.log('\t> @' + loc.name + ': + ' + incomingPlayer0.toLocaleString());
 			}
 
 			if (str !== '') pingChannel(str, loc.name)
@@ -258,7 +267,7 @@ function getRinonMesssage() {
 	var msg;
 	switch(roll) {
 		case 0:
-			msg = "UwU お帰りなさい、ご主人様。これが検索の結果です~";
+			msg = "UwU お帰りなさい、ご主人様。これが検索の結果です~ ごゆっくり。";
 			break;
 		case 1:
 			msg = "え…えっ？検索結果を見せてほしい？そ…そんな…恥ずかしいよ…";
@@ -267,7 +276,7 @@ function getRinonMesssage() {
 			msg = "お帰り、お兄ちゃん！ご飯にする？お風呂にする？それとも…　け・ん・さ・く・の・け・っ・か";
 			break;
 		case 3:
-			msg = "あ、そうですか。検索結果を見たいですか。見せてあげるわ。";
+			msg = "あ、そうですか。検索結果を見たいですか。見せてあげるわ。変態。";
 			break;
 		case 4:
 			msg = "お兄ちゃん、私の検索結果を見ちゃダメェ…！あっ…見ちゃった…もう兄ちゃんだけとしか結婚できない…お兄ちゃんは責任を取るよね";
@@ -309,6 +318,7 @@ function pingChannel(str, locName) {
 	});
 }
 
+bot.on('error', console.error);
 bot.on('message', message => {
 	if (message.content.substring(0, 1) == '!') {
 		var args = message.content.substring(1).split(' ');
