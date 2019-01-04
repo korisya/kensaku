@@ -298,10 +298,6 @@ bot.on('ready', () => {
 	console.log('Connected');
 	console.log(`Logged in as ${bot.user.tag}!`);
 	console.log(bot.user.username + ' - (' + bot.user.id + ')');
-	getInitialData(milpitas);
-	getInitialData(sanJose);
-	getInitialData(dalyCity);
-	getInitialData(concord);
 });
 
 function pingChannel(str, locName) {
@@ -415,4 +411,8 @@ bot.on('message', message => {
 		}
 	}
 });
+getInitialData(milpitas);
+getInitialData(sanJose);
+getInitialData(dalyCity);
+getInitialData(concord);
 bot.login(process.env.CLIENT_TOKEN);
