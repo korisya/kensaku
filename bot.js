@@ -8,6 +8,8 @@ require('dotenv').config();
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
 
+var killBot = false;
+
 // Constructor for Players
 function Player (dancerName, ddrCode, locName) {
 	this.name = dancerName;
@@ -111,6 +113,7 @@ async function getInitialData(loc) {
 async function retrieveData(loc) {
 	var currentTime = new Date();
 	if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
+		yeet(loc.name);
 		loc.todaysPlayers = [];
 	}
 
@@ -147,6 +150,7 @@ async function retrieveData(loc) {
 			}
 		});
 	});
+
 	loc.cabs.forEach(function(cab) {
 		// if the previous first player shifted down a spot
 		if (cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
@@ -314,6 +318,146 @@ function pingChannel(str, locName) {
 	});
 }
 
+function yeet(locName) {
+	bot.channels.forEach(function(channel) {
+		if (locName === 'Milpitas' && channel.name === 'dnb-milpitas') {
+			channel.send("```" + milpitas.getAll() + "```");
+		} else if (locName === 'Daly City' && channel.name === 'dnb-dalycity') {
+			channel.send("```" + dalyCity.getAll() + "```");
+		} else if (locName === 'Concord' && channel.name === 'round1-concord') {
+			channel.send("```" + concord.getAll() + "```");
+		} else if (locName === 'San Jose' && channel.name === 'round1-sanjose') {
+			channel.send("```" + sanJose.getAll() + "```");
+		}
+	});
+}
+
+async function updateChannelTopics() {
+	if (!killBot) {
+		const now = new Date();
+		const nowString = now.toLocaleTimeString([], {
+			hour: '2-digit',
+			minute:'2-digit',
+			timeZone: 'America/Los_Angeles'
+		});
+		bot.channels.forEach(function(channel) {
+			var numPlayers = 0;
+			var str = '(';
+			if (channel.name === 'dnb-milpitas') {
+				milpitas.todaysPlayers.forEach(function(player) {
+					var hr = Math.floor((now - player.lastTime) / msHour);
+					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
+					if (hr < 1) {
+						numPlayers++;
+						str += player.name + ' ' + min + 'm, ';
+					}
+				});
+				str = str.slice(0, -2)
+				if (str.length > 0) str += ') ';
+				if (numPlayers == 0 && milpitas.todaysPlayers.length > 0) {
+					var hr = Math.floor((now - milpitas.todaysPlayers[0].lastTime) / msHour);
+					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
+						.then(updated => console.log(`dnb-milpitas: ${updated.topic}`))
+						.catch(console.error);
+				} else {
+					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
+						.then(updated => console.log(`dnb-milpitas: ${updated.topic}`))
+						.catch(console.error);
+				}
+			} else if (channel.name === 'dnb-dalycity') {
+				dalyCity.todaysPlayers.forEach(function(player) {
+					var hr = Math.floor((now - player.lastTime) / msHour);
+					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
+					if (hr < 1) {
+						numPlayers++;
+						str += player.name + ' ' + min + 'm, ';
+					}
+				});
+				str = str.slice(0, -2)
+				if (str.length > 0) str += ') ';
+				if (numPlayers == 0 && dalyCity.todaysPlayers.length > 0) {
+					var hr = Math.floor((now - dalyCity.todaysPlayers[0].lastTime) / msHour);
+					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
+						.then(updated => console.log(`dnb-dalycity: ${updated.topic}`))
+						.catch(console.error);
+				} else {
+					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
+						.then(updated => console.log(`dnb-dalycity: ${updated.topic}`))
+						.catch(console.error);
+				}
+			} else if (channel.name === 'round1-concord') {
+				concord.todaysPlayers.forEach(function(player) {
+					var hr = Math.floor((now - player.lastTime) / msHour);
+					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
+					if (hr < 1) {
+						numPlayers++;
+						str += player.name + ' ' + min + 'm, ';
+					}
+				});
+				str = str.slice(0, -2)
+				if (str.length > 0) str += ') ';
+				if (numPlayers == 0 && concord.todaysPlayers.length > 0) {
+					var hr = Math.floor((now - concord.todaysPlayers[0].lastTime) / msHour);
+					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
+						.then(updated => console.log(`round1-concord: ${updated.topic}`))
+						.catch(console.error);
+				} else {
+					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
+						.then(updated => console.log(`round1-concord: ${updated.topic}`))
+						.catch(console.error);
+				}
+			} else if (channel.name === 'round1-sanjose') {
+				sanJose.todaysPlayers.forEach(function(player) {
+					var hr = Math.floor((now - player.lastTime) / msHour);
+					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
+					if (hr < 1) {
+						numPlayers++;
+						str += player.name + ' ' + min + 'm, ';
+					}
+				});
+				str = str.slice(0, -2)
+				if (str.length > 0) str += ') ';
+				if (numPlayers == 0 && sanJose.todaysPlayers.length > 0) {
+					var hr = Math.floor((now - sanJose.todaysPlayers[0].lastTime) / msHour);
+					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
+						.then(updated => console.log(`round1-sanjose: ${updated.topic}`))
+						.catch(console.error);
+				} else {
+					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
+						.then(updated => console.log(`round1-sanjose: ${updated.topic}`))
+						.catch(console.error);
+				}
+			}
+		});
+		setTimeout(function() {
+			updateChannelTopics()
+		}, 60000);
+	}
+}
+
+function resetChannelTopics() {
+	killBot = true;
+	bot.channels.forEach(function(channel) {
+		if (channel.name === 'dnb-milpitas') {
+			channel.setTopic('kensaku is offline.')
+				.then(updated => console.log(`dnb-milpitas: ${updated.topic}`))
+				.catch(console.error);
+		} else if (channel.name === 'dnb-dalycity') {
+			channel.setTopic('kensaku is offline.')
+				.then(updated => console.log(`dnb-dalycity: ${updated.topic}`))
+				.catch(console.error);
+		} else if (channel.name === 'round1-concord') {
+			channel.setTopic('kensaku is offline.')
+				.then(updated => console.log(`round1-concord: ${updated.topic}`))
+				.catch(console.error);
+		} else if (channel.name === 'round1-sanjose') {
+			channel.setTopic('kensaku is offline.')
+				.then(updated => console.log(`round1-sanjose: ${updated.topic}`))
+				.catch(console.error);
+		}
+	});
+}
+
 bot.on('error', console.error);
 bot.on('message', message => {
 	if (message.content.substring(0, 1) == '!') {
@@ -323,91 +467,38 @@ bot.on('message', message => {
 		if (cmd === 'whose') {
 			switch (channel) {
 				case 'dnb-milpitas':
-					message.channel.send({embed:{
-						title: milpitas.name,
-						description: getRinonMesssage() + "\n```" + milpitas.getOutput() + "```",
-						color: 0xFF69B4,
-						timestamp: new Date(),
-						footer: {
-							text: "hella tfti",
-							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
-						}
-					}});
+					message.channel.send("```" + milpitas.getOutput() + "```");
 					break;
 				case 'dnb-dalycity':
-					message.channel.send({embed:{
-						title: dalyCity.name,
-						description: getRinonMesssage() + "\n```" + dalyCity.getOutput() + "```",
-						color: 0xFF69B4,
-						timestamp: new Date(),
-						footer: {
-							text: "hella tfti",
-							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
-						}
-					}});
+					message.channel.send("```" + dalyCity.getOutput() + "```");
 					break;
 				case 'round1-concord':
-					message.channel.send({embed:{
-						title: concord.name,
-						description: getRinonMesssage() + "\n```" + concord.getOutput() + "```",
-						color: 0xFF69B4,
-						timestamp: new Date(),
-						footer: {
-							text: "hella tfti",
-							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
-						}
-					}});
+					message.channel.send("```" + concord.getOutput() + "```");
 					break;
 				case 'round1-sanjose':
-					message.channel.send({embed:{
-						title: sanJose.name,
-						description: getRinonMesssage() + "\n```" + sanJose.getOutput() + "```",
-						color: 0xFF69B4,
-						timestamp: new Date(),
-						footer: {
-							text: "hella tfti",
-							icon_url: 'https://media.discordapp.net/attachments/477222516990017546/483482589424910342/tfti.png'
-						}
-					}});
+					message.channel.send("```" + sanJose.getOutput() + "```");
 					break;
 			}
-		} else if (cmd === 'yeet') {
+		} else if (cmd === 'yeet' && message.author.tag === process.env.ADMIN_TAG) {
 			switch(channel) {
 				case 'dnb-milpitas':
-					message.channel.send({embed:{
-						title: milpitas.name,
-						description: getRinonMesssage() + "\n```" + milpitas.getAll() + "```",
-						color: 0xFFFFFF,
-						timestamp: new Date(),
-					}});
+					message.channel.send("```" + milpitas.getAll() + "```");
 					break;
 				case 'dnb-dalycity':
-					message.channel.send({embed:{
-						title: dalyCity.name,
-						description: getRinonMesssage() + "\n```" + dalyCity.getAll() + "```",
-						color: 0xFFFFFF,
-						timestamp: new Date()
-					}});
+					message.channel.send("```" + dalyCity.getAll() + "```");
 					break;
 				case 'round1-concord':
-					message.channel.send({embed:{
-						title: concord.name,
-						description: getRinonMesssage() + "\n```" + concord.getAll() + "```",
-						color: 0xFFFFFF,
-						timestamp: new Date()
-					}});
+					message.channel.send("```" + concord.getAll() + "```");
 					break;
 				case 'round1-sanjose':
-					message.channel.send({embed:{
-						title: sanJose.name,
-						description: getRinonMesssage() + "\n```" + sanJose.getAll() + "```",
-						color: 0xFFFFFF,
-						timestamp: new Date()
-					}});
+					message.channel.send("```" + sanJose.getAll() + "```");
 					break;
 			}
 		} else if (cmd == 'help') {
 			message.channel.send('Commands: !whose, !yeet');
+		} else if (cmd == 'reset' && message.author.tag === process.env.ADMIN_TAG) {
+			resetChannelTopics();
+			message.channel.send('Kill me.');
 		}
 	}
 });
@@ -415,4 +506,5 @@ getInitialData(milpitas);
 getInitialData(sanJose);
 getInitialData(dalyCity);
 getInitialData(concord);
+updateChannelTopics();
 bot.login(process.env.CLIENT_TOKEN);
