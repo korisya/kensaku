@@ -14,7 +14,7 @@ function timeDifferential(nowTime, beforeTime) {
   return {
     h: hr,
     m: min,
-    str: `${hr}h${min}m`
+    str: `${hr}h ${min}m`
   };
 }
 function timeString(time, timeZone) {
