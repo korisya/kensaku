@@ -12,63 +12,51 @@ For the bot to actually run.
 
 ### Input cookies and bot token
 
-There are two ways to add the cookies and bot token to the program:
-1. Create a new file, `secret.txt`. Paste the bot token first, and then each cookie, all separated by a space. Within `bot.js`, the token will be `secrets[0]`, the first cookie will be `secrets[1]`, the second cookie will be `secrets[2]`, and so on.
-2. Add the cookie values (lines 224-228) and bot token (line 303) to `bot.js`. Remove lines 7-13 in `bot.js`.
+1. Make a file, and name it `.env`.
+
+2. Input cookie values, bot token, and admin tag. For example,
+```
+CLIENT_TOKEN=[client token]
+MILPITAS=[cookie for Milpitas]
+SANJOSEJ=[cookie for San Jose J-cab]
+SANJOSEK=[cookie for San Jose K-cab]
+DALYCITY=[cookie for Daly City]
+CONCORD=[cookie for Concord]
+ADMIN_TAG=[username#tag]
+```
 
 ## Commands
 
-Typing `!whose` in Discord should yield the recent players of that location. For example, typing `!whose` in `#dnb-milpitas` should list the players who have logged in at Milpitas today, up to 20 players.
+Typing `!whose` in Discord should yield the recent players of that location. For example, typing `!whose` in `#dnb-milpitas` should list the players who have logged in at Milpitas within the last 2 hours. `!help` will list the available commands. `!yeet` and `!reset` are restricted to the user with the admin tag. `!yeet` lists all players that played on the current day, and `!reset` resets the channel topics to `kensaku is offline.`.
 
 ## Adding more locations
 
-1. To create a machine location, use `new Location (val, name)` where `val` is the cookie's value and `name` is the location's name.
+1. To create a machine location, use `new Location (cabs, name)` where `cabs` is the array of `Cab` objects and `name` is the location's name.
 
-2. Currently, the code already has 4 locations: Milpitas, San Jose, Daly City, and Concord. San Jose has two machines, and each machine is represented by a separate Location object.
+2. To create a cab, use `new Cab (cookie, name)` where `cookie` is the cookie value (and can be accessed with `process.env.[name of value in the .env file]`) and `name` is the cabinet name.
 
-3. Code for outputting each machine location has to be added manually. For example, if the channel from which the bot is called is called `#dnb-milpitas` and `milpitas` is the Location object, then this code should be added after line 251 in `bot.js`:
-```javascript
-case 'dnb-milpitas':
-  message.channel.send({embed:{
-    title: milpitas.name,
-    description: getRinonMesssage() + "\n```" + milpitas.getOutput() + "```",
-    color: 0xFFFFFF,
-    timestamp: new Date()
-  }});
-  break;
-```
+3. Currently, the code already contains 4 locations: Milpitas, San Jose, Daly City, and Concord. San Jose has two cabs.
 
-4. If a location has two machines, then two Location objects are necessary. Furthermore, if they are to be called from the same channel, then the command `!whose` must have an argument; for example, typing `!whose j` in the channel `#round1-sanjose` will list players who logged on to the J-cab. The argument `'j'` is stored in the variable `subcmd`. See the following code for reference:
-```javascript
-case 'round1-sanjose':
-  switch (subcmd) {
-    case 'jcab':
-    case 'j':
-      message.channel.send({embed:{
-        title: sanJoseJ.name,
-        description: getRinonMesssage() + "\n```" + sanJoseJ.getOutput() + "```",
-        color: 0xFFFFFF,
-        timestamp: new Date()
-      }});
-      break;
-    case 'kcab':
-    case 'k':
-      message.channel.send({embed:{
-        title: sanJoseK.name,
-        description: getRinonMesssage() + "\n```" + sanJoseK.getOutput() + "```",
-        color: 0xFFFFFF,
-        timestamp: new Date()
-      }});
-      break;
-  }
-  break;
-```
-5. `getCurrentData(loc)` should be called for every Location `loc` when the bot starts (see lines 237-241 in `bot.js`).
+3. Code regarding specific locations have to be added manually. For example, if the channel from which the bot is called is called `dnb-milpitas` and `milpitas` is the Location object, then `function pingChannel(str, locName)`, `function yeet(locName)`, `async function updateChannelTopics()`, and `bot.on('message', message => { ... })` must be updated.
+
+5. `getInitialData(loc)` should be called for every Location `loc`.
 
 ## Bugs
-* Sometimes the bot will output players with blank names.
+* Players who switch locations and were last to play at another location will mess up the list of the current day's players at their previous location. Specifically, the two players before the player who switched locations will show up.
 
 ## Changelog
+* v0.5.0
+  * Renamed `getCurrentData` to `getInitialData`
+  * Secrets stored in `.env`
+  * Updates the channel topics with recent players
+  * `now.json` allows the code to be run with [now](https://zeit.co/now)
+  * `getRinonMessage()` is no longer used
+  * `!yeet` can now only be called by admin
+  * `!whose` is still available for normal users
+  * Added commands `!reset`, `!help`
+  * Restructured data into `Location`s that have `Cab`s which store `Player`s
+    * As a result, data from 2+ cabs in 1 location is merged
+    * Fixed situation where one player would switch cabs when they were last to play on the old cab
 * v0.3.2
   * Can now input bot token and cookies through `secret.txt`
   * Only lists players who logged in on the current day (new day starts at 4 am)
