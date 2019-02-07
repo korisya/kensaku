@@ -353,7 +353,8 @@ function updateChannelTopic(loc, channel) {
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
     topic = `${nowString}: Everyone(${loc.todaysPlayers.length}) left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
-    topic = `${nowString}: ${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
+    const s = (numPlayers === 1) ? '' : 's';
+    topic = `${nowString}: ${numPlayers} player${s} in the last hour. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
   }
   channel.setTopic(topic)
     .then(updated => console.log(`Updated topic #${loc.id}: ${updated.topic}`))
