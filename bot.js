@@ -348,6 +348,7 @@ function updateChannelTopic(loc, channel) {
       playerNamesTimes.push(`${player.name} ${timeSinceSeen.m}m`);
     }
   });
+  const s = (numPlayers === 1) ? '' : 's';
 
   let topic;
   if (loc.todaysPlayers.length === 0) {
@@ -355,9 +356,8 @@ function updateChannelTopic(loc, channel) {
     topic = `${nowString}: 0 players today.`;
   } else if (numPlayers === 0) {
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
-    topic = `${nowString}: Everyone(${loc.todaysPlayers.length}) left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
+    topic = `${nowString}: All ${loc.todaysPlayers.length} player${s} today left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
-    const s = (numPlayers === 1) ? '' : 's';
     topic = `${nowString}: ${numPlayers} player${s} in the last hour. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
   }
   channel.setTopic(topic)
