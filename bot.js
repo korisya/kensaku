@@ -444,7 +444,15 @@ const ALL_LOCATIONS = [
     ]
   }),
 ];
+function getAllInitialData() {
+  ALL_LOCATIONS.forEach((loc) => getInitialData(loc));
+}
 
-ALL_LOCATIONS.forEach((loc) => getInitialData(loc));
-bot.login(process.env.DISCORD_BOT_TOKEN)
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+if (!DISCORD_BOT_TOKEN) {
+  console.error('Missing DISCORD_BOT_TOKEN environment variable.');
+  process.exit();
+}
+bot.login(DISCORD_BOT_TOKEN)
+  .then(getAllInitialData)
   .then(updateChannelTopics);
