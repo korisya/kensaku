@@ -7,504 +7,452 @@ require('dotenv').config();
 
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
+const REFRESH_INTERVAL = msMinute;
+function timeDifferential(nowTime, beforeTime) {
+  const hr = Math.floor((nowTime - beforeTime) / msHour);
+  const min = Math.floor(((nowTime - beforeTime) % msHour) / msMinute);
+  return {
+    h: hr,
+    m: min,
+    str: `${hr}h ${min}m`
+  };
+}
+function timeString(time, timeZone) {
+  return time.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: timeZone
+  });
+}
 
 var killBot = false;
 
 // Constructor for Players
-function Player (dancerName, ddrCode, locName) {
-	this.name = dancerName;
-	this.ddrCode = ddrCode;
+function Player (args) {
+  this.name = args.dancerName;
+  this.ddrCode = args.ddrCode;
+  this.loc = args.loc;
 
-	this.firstTime = new Date();
-	this.lastTime = new Date();
+  this.firstTime = new Date();
+  this.lastTime = new Date();
 
-	this.location = locName;
-
-	this.toLocaleString = function () {
-		return this.name + ' ' + this.ddrCode;
-	};
+  this.toLocaleString = function () {
+    return this.name + ' ' + this.ddrCode;
+  };
 }
 
 // Constructor for cabs
 function Cab (cookie) {
-	this.players = [];
-	this.newPlayers = [];
-	this.cookie = new tough.Cookie({
-		key: "M573SSID",
-		value: cookie,
-		domain: 'p.eagate.573.jp',
-		httpOnly: true,
-		maxAge: 31536000
-	});
-	this.cookiejar = rp.jar();
-	this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
-	this.options = {
-		uri: `https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4&slot=`,
-		jar: this.cookiejar,
-		transform: function (body) {
-			return cheerio.load(body);
-	}};
-	this.prunedPlayers = 0;
+  this.players = [];
+  this.newPlayers = [];
+  this.cookie = new tough.Cookie({
+    key: "M573SSID",
+    value: cookie,
+    domain: 'p.eagate.573.jp',
+    httpOnly: true,
+    maxAge: 31536000
+  });
+  this.cookiejar = rp.jar();
+  this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
+  this.requestDataOptions = {
+    uri: `https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4`,
+    jar: this.cookiejar,
+    transform: function (body) {
+      return cheerio.load(body);
+    }};
+  this.prunedPlayers = 0;
 }
 // Constructor for locations
-function Location (cabs, name) {
-	this.name = name;
-	this.cabs = cabs;
-	this.todaysPlayers = [];
+function Location (loc) {
+  this.name = loc.name;
+  this.id = loc.id;
+  this.cabs = loc.cabs;
+  this.timeZone = loc.timeZone;
+  this.todaysPlayers = [];
 
-	this.getOutput = function () {
-		var currentTime = new Date();
-		var output = '';
-		for (var i = 0; i < this.todaysPlayers.length; i++) {
-			var hr = Math.floor((currentTime - this.todaysPlayers[i].lastTime) / msHour);
-			var min = Math.floor(((currentTime - this.todaysPlayers[i].lastTime) % msHour) / msMinute);
+  this.getRecentPlayers = function () {
+    const currentTime = new Date();
+    let output = '';
+    // TODO: Use a reduce function
+    this.todaysPlayers.forEach(function(player) {
+      const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
+      if (timeSinceSeen.h < 2) {
+        const firstTimeString = timeString(player.firstTime, this.timeZone);
+        output += `${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago\n`;
+      }
+    });
+    return output || ' ';
+  };
 
-			if (hr < 2) {
-				output += this.todaysPlayers[i].name;
-				for (var k = this.todaysPlayers[i].name.length; k < 8; k++)
-					output += ' ';
-
-				output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', timeZone: 'America/Los_Angeles'});
-				output += '   Seen ' + hr + 'h ' + min +  'm ago\n';
-			}
-		}
-		return output || ' ';
-	};
-
-	this.getAll = function () {
-		var currentTime = new Date();
-		var output = '';
-		for (var i = 0; i < this.todaysPlayers.length; i++) {
-			var hr = Math.floor((this.todaysPlayers[i].lastTime - this.todaysPlayers[i].firstTime) / msHour);
-			var min = Math.floor(((this.todaysPlayers[i].lastTime - this.todaysPlayers[i].firstTime) % msHour) / msMinute);
-
-			output += this.todaysPlayers[i].name;
-			for (var k = this.todaysPlayers[i].name.length; k < 8; k++)
-				output += ' ';
-
-			output += '   ' + this.todaysPlayers[i].firstTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', timeZone: 'America/Los_Angeles'});
-			output += ' - ' + this.todaysPlayers[i].lastTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', timeZone: 'America/Los_Angeles'});
-			output += '   (' + hr + 'h ' + min + 'm)\n';
-		}
-		return output || ' ';
-	};
+  this.getTodaysPlayers = function () {
+    const currentTime = new Date();
+    let output = '';
+    // TODO: Use a reduce function
+    this.todaysPlayers.forEach(function(player) {
+      const firstTime = timeString(player.firstTime, player.loc.timeZone);
+      const lastTime = timeString(player.lastTime, player.loc.timeZone);
+      const timePlayed = timeDifferential(player.lastTime, player.firstTime);
+      output += `${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})\n`;
+    });
+    return output || ' ';
+  };
 }
 
 // Gets initial data
 async function getInitialData(loc) {
-	loc.cabs.forEach(async function(cab) {
-		await rp(cab.options).then(($) => {
-				// Parses data
-				for (var i = 1; i < $('.dancer_name').get().length - 13; i++) { // i = 1 because first value isn't a player name
-					cab.players[i-1] = new Player($('.dancer_name').eq(i).text(), $('.code').eq(i).text(), loc.name);
-					console.log('--> ' + loc.name + ': Player ' + i + ' received - ' + cab.players[i-1].toLocaleString());
-				}
-			}).catch((err) => {
-				console.log('--> Failed to get initial data. Restart the bot.')
-				throw err;
-		});
-	});
-	setTimeout(function() {
-		retrieveData(loc)
-	}, 60000);
+  loc.cabs.forEach(async function(cab) {
+    await rp(cab.requestDataOptions).then(($) => {
+      // Parses data
+      for (var dancerIndex = 1; dancerIndex < $('.dancer_name').get().length - 13; dancerIndex++) { // dancerIndex = 1 because first value isn't a player name
+        cab.players[dancerIndex-1] = new Player({
+          dancerName: $('.dancer_name').eq(dancerIndex).text(),
+          ddrCode: $('.code').eq(dancerIndex).text(),
+          loc: loc
+        });
+        console.log('--> ' + loc.name + ': Player ' + dancerIndex + ' received - ' + cab.players[dancerIndex-1].toLocaleString());
+      }
+    }).catch((err) => {
+      console.log('--> Failed to get initial data. Restart the bot.')
+      throw err;
+    });
+  });
+  setTimeout(function() {
+    retrieveData(loc)
+  }, REFRESH_INTERVAL);
 }
 
 // Retrieves new data every minute
 async function retrieveData(loc) {
-	var currentTime = new Date();
-	if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
-		yeet(loc.name);
-		loc.todaysPlayers = [];
-	}
+  var currentTime = new Date();
+  // Autoyeet at 5am GMT+9 Tokyo (beginning of maintenance)
+  // TODO: For cabs on USA server, autoyeet/reset at 4am local time.
+  // For all other cabs (all on JP server), autoyeet/reset at the beginning of maintenance.
+  // The current deployment for USA cabs runs on GMT+0, so "12" means 4am GMT-8.
 
-	console.log('--> ' + loc.name + ': Retrieving data...');
+  // Assumes that we run this client in GMT-8... :(
+  // TODO: Fix this so that we don't depend on the time zone which the client is run from.
+  // Might be easiest to hard-code to Tokyo
+  //
+  // What happens if people are playing during this hour?
+  // In Japan, should be impossible (daily maintenance or shop closed)
+  // In USA, everything should be closed
+  if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
+    reportTodaysPlayersAllGuilds(loc);
+    loc.todaysPlayers = [];
+  }
 
-	for (var i = 0; i < loc.cabs.length; i++) {
-		await rp(loc.cabs[i].options).then(($) => {
-			if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
-				console.log('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
-			} else {
-				loc.cabs[i].newPlayers[0] = new Player($('.dancer_name').eq(1).text(), $('.code').eq(1).text(), loc.name);
-				loc.cabs[i].newPlayers[1] = new Player($('.dancer_name').eq(2).text(), $('.code').eq(2).text(), loc.name);
-				console.log('--> ' + loc.name + ': Data received @cab' + (i + 1) + '\n\t> ' + loc.cabs[i].newPlayers.toLocaleString());
-			}
-		}).catch((err) => {
-			console.log(err);
-			console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data. @' + loc.name + '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
-		});
-	}
+  console.log('--> ' + loc.name + ': Retrieving data...');
 
-	loc.cabs.forEach(function(cab1) {
-		loc.cabs.forEach(function(cab2) {
-			if (cab1 !== cab2) {
-				cab1.newPlayers.forEach(function(newPlayer) {
-					var foundPlayer = cab2.players.find(function(player) {
-						return player.ddrCode === newPlayer.ddrCode;
-					});
-					if (foundPlayer) {
-						console.log('--> ' + loc.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
-						cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
-						cab2.prunedPlayers++;
-					}
-				});
-			}
-		});
-	});
+  for (let index = 0; index < loc.cabs.length; index++) {
+    await rp(loc.cabs[index].requestDataOptions).then(($) => {
+      if ($('.dancer_name').length === 0) {
+        console.error('--> ' + loc.name + ': No dancers found. Is this cookie set up correctly?');
+      } else if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
+        console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
+      } else {
+        loc.cabs[index].newPlayers[0] = new Player({
+          dancerName: $('.dancer_name').eq(1).text(),
+          ddrCode: $('.code').eq(1).text(),
+          loc: loc
+        });
+        loc.cabs[index].newPlayers[1] = new Player({
+          dancerName: $('.dancer_name').eq(2).text(),
+          ddrCode: $('.code').eq(2).text(),
+          loc: loc
+        });
+        console.log('--> ' + loc.name + ': Data received @cab' + (index + 1) + '\n\t> ' + loc.cabs[index].newPlayers.toLocaleString());
+      }
+    }).catch((err) => {
+      console.log(err);
+      console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data. @' + loc.name + '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
+    });
+  }
 
-	loc.cabs.forEach(function(cab) {
-		// if the previous first player shifted down a spot
-		if (cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
-			var incomingPlayer = cab.newPlayers[0];
+  loc.cabs.forEach(function(cab1) {
+    loc.cabs.forEach(function(cab2) {
+      if (cab1 !== cab2) {
+        cab1.newPlayers.forEach(function(newPlayer) {
+          var foundPlayer = cab2.players.find(function(player) {
+            return player.ddrCode === newPlayer.ddrCode;
+          });
+          if (foundPlayer) {
+            console.log('--> ' + loc.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
+            cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
+            cab2.prunedPlayers++;
+          }
+        });
+      }
+    });
+  });
 
-			// Check for duplicates
-			var foundPlayer = cab.players.find(function(player) {
-				return player.ddrCode === incomingPlayer.ddrCode;
-			});
-			console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
-			// if duplicate, remove and unshift. else unshift and pop
-			if (foundPlayer) {
-				cab.players.splice(cab.players.indexOf(foundPlayer), 1);
-				cab.players.unshift(incomingPlayer);
-			} else {
-				cab.players.unshift(incomingPlayer);
-				if (cab.prunedPlayers > 0) {
-					cab.prunedPlayers--;
-				} else {
-					cab.players.pop();
-				}
-			}
-			console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
+  loc.cabs.forEach(function(cab) {
+    if (!cab.players.length) {
+      return;
+    }
 
-			// find out if the player is on today's list
-			var foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
-				return player.ddrCode === incomingPlayer.ddrCode;
-			});
+    // if the previous first player shifted down a spot
+    if (cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode
+      && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
+      var incomingPlayer = cab.newPlayers[0];
 
-			// if duplicate, remove and unshift. else unshift
-			if (foundTodaysPlayer) {
-				incomingPlayer.firstTime = foundTodaysPlayer.firstTime;
-				loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer), 1);
-				loc.todaysPlayers.unshift(incomingPlayer);
-			} else {
-				loc.todaysPlayers.unshift(incomingPlayer);
-				pingChannel('+ ' + incomingPlayer.name + '    ' + incomingPlayer.ddrCode, loc.name);
-				console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
-			}
-			// how are we going to get total session times? yay now it's ez
-		} // else, if the first two players are different in any way
-		else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
+      // Check for duplicates
+      var foundPlayer = cab.players.find(function(player) {
+        return player.ddrCode === incomingPlayer.ddrCode;
+      });
+      console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
+      // if duplicate, remove and unshift. else unshift and pop
+      if (foundPlayer) {
+        cab.players.splice(cab.players.indexOf(foundPlayer), 1);
+        cab.players.unshift(incomingPlayer);
+      } else {
+        cab.players.unshift(incomingPlayer);
+        if (cab.prunedPlayers > 0) {
+          cab.prunedPlayers--;
+        } else {
+          cab.players.pop();
+        }
+      }
+      console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
 
-			var incomingPlayer0 = cab.newPlayers[0];
-			var incomingPlayer1 = cab.newPlayers[1];
+      // find out if the player is on today's list
+      var foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
+        return player.ddrCode === incomingPlayer.ddrCode;
+      });
 
-			var foundPlayer0 = cab.players.find(function(player) {
-				return player.ddrCode === incomingPlayer0.ddrCode;
-			});
-			var foundPlayer1 = cab.players.find(function(player) {
-				return player.ddrCode === incomingPlayer1.ddrCode;
-			});
+      // if duplicate, remove and unshift. else unshift
+      if (foundTodaysPlayer) {
+        incomingPlayer.firstTime = foundTodaysPlayer.firstTime;
+        loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer), 1);
+        loc.todaysPlayers.unshift(incomingPlayer);
+      } else {
+        loc.todaysPlayers.unshift(incomingPlayer);
+        pingChannel(loc.id, '+ ' + incomingPlayer.name + '    ' + incomingPlayer.ddrCode);
+        console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
+      }
+      // how are we going to get total session times? yay now it's ez
+    } // else, if the first two players are different in any way
+    else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode
+      && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
 
-			console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
-			if (foundPlayer1) {
-				cab.players.splice(cab.players.indexOf(foundPlayer1), 1);
-				cab.players.unshift(incomingPlayer1);
-			} else {
-				cab.players.unshift(incomingPlayer1);
-				if (cab.prunedPlayers > 0) {
-					cab.prunedPlayers--;
-				} else {
-					cab.players.pop();
-				}
-			}
-			if (foundPlayer0) {
-				cab.players.splice(cab.players.indexOf(foundPlayer0), 1);
-				cab.players.unshift(incomingPlayer0);
-			} else {
-				cab.players.unshift(incomingPlayer0);
-				if (cab.prunedPlayers > 0) {
-					cab.prunedPlayers--;
-				} else {
-					cab.players.pop();
-				}
-			}
-			console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
+      var incomingPlayer0 = cab.newPlayers[0];
+      var incomingPlayer1 = cab.newPlayers[1];
 
-			var foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
-				return player.ddrCode === incomingPlayer0.ddrCode;
-			});
-			var foundTodaysPlayer1 = loc.todaysPlayers.find(function(player) {
-				return player.ddrCode === incomingPlayer1.ddrCode;
-			});
+      var foundPlayer0 = cab.players.find(function(player) {
+        return player.ddrCode === incomingPlayer0.ddrCode;
+      });
+      var foundPlayer1 = cab.players.find(function(player) {
+        return player.ddrCode === incomingPlayer1.ddrCode;
+      });
 
-			var str = '';
-			if (foundTodaysPlayer1) {
-				incomingPlayer1.firstTime = foundTodaysPlayer1.firstTime;
-				loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer1), 1);
-				loc.todaysPlayers.unshift(incomingPlayer1);
-			} else {
-				loc.todaysPlayers.unshift(incomingPlayer1);
-				str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
-				console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
-			}
+      console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
+      if (foundPlayer1) {
+        cab.players.splice(cab.players.indexOf(foundPlayer1), 1);
+        cab.players.unshift(incomingPlayer1);
+      } else {
+        cab.players.unshift(incomingPlayer1);
+        if (cab.prunedPlayers > 0) {
+          cab.prunedPlayers--;
+        } else {
+          cab.players.pop();
+        }
+      }
+      if (foundPlayer0) {
+        cab.players.splice(cab.players.indexOf(foundPlayer0), 1);
+        cab.players.unshift(incomingPlayer0);
+      } else {
+        cab.players.unshift(incomingPlayer0);
+        if (cab.prunedPlayers > 0) {
+          cab.prunedPlayers--;
+        } else {
+          cab.players.pop();
+        }
+      }
+      console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
 
-			if (foundTodaysPlayer0) {
-				incomingPlayer0.firstTime = foundTodaysPlayer0.firstTime;
-				loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer0), 1);
-				loc.todaysPlayers.unshift(incomingPlayer0);
-			} else {
-				loc.todaysPlayers.unshift(incomingPlayer0);
-				str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
-				console.log('\t> @' + loc.name + ': + ' + incomingPlayer0.toLocaleString());
-			}
+      var foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
+        return player.ddrCode === incomingPlayer0.ddrCode;
+      });
+      var foundTodaysPlayer1 = loc.todaysPlayers.find(function(player) {
+        return player.ddrCode === incomingPlayer1.ddrCode;
+      });
 
-			if (str !== '') pingChannel(str, loc.name)
-		}
-	});
-	setTimeout(function() {
-		retrieveData(loc)
-	}, 60000);
+      var str = '';
+      if (foundTodaysPlayer1) {
+        incomingPlayer1.firstTime = foundTodaysPlayer1.firstTime;
+        loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer1), 1);
+        loc.todaysPlayers.unshift(incomingPlayer1);
+      } else {
+        loc.todaysPlayers.unshift(incomingPlayer1);
+        str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
+        console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
+      }
+
+      if (foundTodaysPlayer0) {
+        incomingPlayer0.firstTime = foundTodaysPlayer0.firstTime;
+        loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer0), 1);
+        loc.todaysPlayers.unshift(incomingPlayer0);
+      } else {
+        loc.todaysPlayers.unshift(incomingPlayer0);
+        str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
+        console.log('\t> @' + loc.name + ': + ' + incomingPlayer0.toLocaleString());
+      }
+
+      if (str !== '') {
+        pingChannel(loc.id, str);
+      }
+    }
+  });
+  setTimeout(function() {
+    retrieveData(loc)
+  }, REFRESH_INTERVAL);
 }
-
-// Returns a random message from Rinon!
-function getRinonMesssage() {
-	var roll = Math.floor(Math.random() * 5);
-	var msg;
-	switch(roll) {
-		case 0:
-			msg = "UwU お帰りなさい、ご主人様。これが検索の結果です~ ごゆっくり。";
-			break;
-		case 1:
-			msg = "え…えっ？検索結果を見せてほしい？そ…そんな…恥ずかしいよ…";
-			break;
-		case 2:
-			msg = "お帰り、お兄ちゃん！ご飯にする？お風呂にする？それとも…　け・ん・さ・く・の・け・っ・か";
-			break;
-		case 3:
-			msg = "あ、そうですか。検索結果を見たいですか。見せてあげるわ。変態。";
-			break;
-		case 4:
-			msg = "お兄ちゃん、私の検索結果を見ちゃダメェ…！あっ…見ちゃった…もう兄ちゃんだけとしか結婚できない…お兄ちゃんは責任を取るよね";
-			break;
-	}
-	return msg;
-}
-
-// Initalize locations
-var milpitas = new Location([new Cab(process.env.MILPITAS)], 'Milpitas');
-var sanJose = new Location([new Cab(process.env.SANJOSEJ), new Cab(process.env.SANJOSEK)], 'San Jose');
-var dalyCity = new Location([new Cab(process.env.DALYCITY)], 'Daly City');
-var concord = new Location([new Cab(process.env.CONCORD)], 'Concord');
 
 // Initialize Discord Bot
 var bot = new Discord.Client();
 
 bot.on('ready', () => {
-	console.log('Connected');
-	console.log(`Logged in as ${bot.user.tag}!`);
-	console.log(bot.user.username + ' - (' + bot.user.id + ')');
+  console.log('Connected');
+  console.log(`Logged in as ${bot.user.tag}!`);
+  console.log(bot.user.username + ' - (' + bot.user.id + ')');
 });
 
-function pingChannel(str, locName) {
-	bot.channels.forEach(function(channel) {
-		if (locName === 'Milpitas' && channel.name === 'dnb-milpitas') {
-			channel.sendCode('javascript', str);
-		} else if (locName === 'Daly City' && channel.name === 'dnb-dalycity') {
-			channel.sendCode('javascript', str);
-		} else if (locName === 'Concord' && channel.name === 'round1-concord') {
-			channel.sendCode('javascript', str);
-		} else if (locName === 'San Jose' && channel.name === 'round1-sanjose') {
-			channel.sendCode('javascript', str);
-		}
-	});
+// Reused in a few places
+// Plus we have the same channel name on multiple guilds
+function getChannelsWithName(name) {
+  return bot.channels.filter(channel => channel.name === name);
+};
+
+function pingChannel(channelName, message) {
+  getChannelsWithName(channelName).forEach(channel => channel.send('```' + message + '```'));
 }
 
-function yeet(locName) {
-	bot.channels.forEach(function(channel) {
-		if (locName === 'Milpitas' && channel.name === 'dnb-milpitas') {
-			channel.send("```" + milpitas.getAll() + "```");
-		} else if (locName === 'Daly City' && channel.name === 'dnb-dalycity') {
-			channel.send("```" + dalyCity.getAll() + "```");
-		} else if (locName === 'Concord' && channel.name === 'round1-concord') {
-			channel.send("```" + concord.getAll() + "```");
-		} else if (locName === 'San Jose' && channel.name === 'round1-sanjose') {
-			channel.send("```" + sanJose.getAll() + "```");
-		}
-	});
+function reportTodaysPlayersAllGuilds(loc) {
+  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayers(channel, loc));
+}
+
+function reportTodaysPlayers(channel, loc) {
+  channel.send('```' + loc.getTodaysPlayers() + '```');
+}
+
+function updateChannelTopic(loc, channel) {
+  const currentTime = new Date();
+  const nowString = timeString(currentTime, loc.timeZone);
+
+  let numPlayers = 0;
+  const playerNamesTimes = [];
+
+  loc.todaysPlayers.forEach(function(player) {
+    const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
+    if (timeSinceSeen.h < 1) {
+      numPlayers++;
+      playerNamesTimes.push(`${player.name} ${timeSinceSeen.m}m`);
+    }
+  });
+  const s = (numPlayers === 1) ? '' : 's';
+
+  let topic;
+  if (loc.todaysPlayers.length === 0) {
+    // TODO: Perhaps include the day's start time (local time per arcade)
+    topic = `${nowString}: 0 players today.`;
+  } else if (numPlayers === 0) {
+    const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
+    topic = `${nowString}: All ${loc.todaysPlayers.length} player${s} today left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
+  } else {
+    topic = `${nowString}: ${numPlayers} player${s} in the last hour. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
+  }
+  channel.setTopic(topic)
+    .then(updated => console.log(`Updated topic #${loc.id}: ${updated.topic}`))
+    // TODO: log loc.id
+    .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
 async function updateChannelTopics() {
-	if (!killBot) {
-		const now = new Date();
-		const nowString = now.toLocaleTimeString([], {
-			hour: '2-digit',
-			minute:'2-digit',
-			timeZone: 'America/Los_Angeles'
-		});
-		bot.channels.forEach(function(channel) {
-			var numPlayers = 0;
-			var str = '(';
-			if (channel.name === 'dnb-milpitas') {
-				milpitas.todaysPlayers.forEach(function(player) {
-					var hr = Math.floor((now - player.lastTime) / msHour);
-					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
-					if (hr < 1) {
-						numPlayers++;
-						str += player.name + ' ' + min + 'm, ';
-					}
-				});
-				str = str.slice(0, -2)
-				if (str.length > 0) str += ') ';
-				if (numPlayers == 0 && milpitas.todaysPlayers.length > 0) {
-					var hr = Math.floor((now - milpitas.todaysPlayers[0].lastTime) / msHour);
-					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
-						.then(updated => console.log(`dnb-milpitas: ${updated.topic}`))
-						.catch(console.error);
-				} else {
-					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
-						.then(updated => console.log(`dnb-milpitas: ${updated.topic}`))
-						.catch(console.error);
-				}
-			} else if (channel.name === 'dnb-dalycity') {
-				dalyCity.todaysPlayers.forEach(function(player) {
-					var hr = Math.floor((now - player.lastTime) / msHour);
-					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
-					if (hr < 1) {
-						numPlayers++;
-						str += player.name + ' ' + min + 'm, ';
-					}
-				});
-				str = str.slice(0, -2)
-				if (str.length > 0) str += ') ';
-				if (numPlayers == 0 && dalyCity.todaysPlayers.length > 0) {
-					var hr = Math.floor((now - dalyCity.todaysPlayers[0].lastTime) / msHour);
-					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
-						.then(updated => console.log(`dnb-dalycity: ${updated.topic}`))
-						.catch(console.error);
-				} else {
-					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
-						.then(updated => console.log(`dnb-dalycity: ${updated.topic}`))
-						.catch(console.error);
-				}
-			} else if (channel.name === 'round1-concord') {
-				concord.todaysPlayers.forEach(function(player) {
-					var hr = Math.floor((now - player.lastTime) / msHour);
-					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
-					if (hr < 1) {
-						numPlayers++;
-						str += player.name + ' ' + min + 'm, ';
-					}
-				});
-				str = str.slice(0, -2)
-				if (str.length > 0) str += ') ';
-				if (numPlayers == 0 && concord.todaysPlayers.length > 0) {
-					var hr = Math.floor((now - concord.todaysPlayers[0].lastTime) / msHour);
-					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
-						.then(updated => console.log(`round1-concord: ${updated.topic}`))
-						.catch(console.error);
-				} else {
-					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
-						.then(updated => console.log(`round1-concord: ${updated.topic}`))
-						.catch(console.error);
-				}
-			} else if (channel.name === 'round1-sanjose') {
-				sanJose.todaysPlayers.forEach(function(player) {
-					var hr = Math.floor((now - player.lastTime) / msHour);
-					var min = Math.floor(((now - player.lastTime) % msHour) / msMinute);
-					if (hr < 1) {
-						numPlayers++;
-						str += player.name + ' ' + min + 'm, ';
-					}
-				});
-				str = str.slice(0, -2)
-				if (str.length > 0) str += ') ';
-				if (numPlayers == 0 && sanJose.todaysPlayers.length > 0) {
-					var hr = Math.floor((now - sanJose.todaysPlayers[0].lastTime) / msHour);
-					channel.setTopic(`No one's here! :eyes: The last players were seen over ${hr} hour(s) ago. [${nowString}]`)
-						.then(updated => console.log(`round1-sanjose: ${updated.topic}`))
-						.catch(console.error);
-				} else {
-					channel.setTopic(`${numPlayers} player(s) in the last hour. :eyes: <:TFTI:483651827984760842> ${str}[${nowString}]`)
-						.then(updated => console.log(`round1-sanjose: ${updated.topic}`))
-						.catch(console.error);
-				}
-			}
-		});
-		setTimeout(function() {
-			updateChannelTopics()
-		}, 60000);
-	}
-}
-
-function resetChannelTopics() {
-	killBot = true;
-	bot.channels.forEach(function(channel) {
-		if (channel.name === 'dnb-milpitas') {
-			channel.setTopic('kensaku is offline.')
-				.then(updated => console.log(`dnb-milpitas: ${updated.topic}`))
-				.catch(console.error);
-		} else if (channel.name === 'dnb-dalycity') {
-			channel.setTopic('kensaku is offline.')
-				.then(updated => console.log(`dnb-dalycity: ${updated.topic}`))
-				.catch(console.error);
-		} else if (channel.name === 'round1-concord') {
-			channel.setTopic('kensaku is offline.')
-				.then(updated => console.log(`round1-concord: ${updated.topic}`))
-				.catch(console.error);
-		} else if (channel.name === 'round1-sanjose') {
-			channel.setTopic('kensaku is offline.')
-				.then(updated => console.log(`round1-sanjose: ${updated.topic}`))
-				.catch(console.error);
-		}
-	});
+  if (!killBot) {
+    ALL_LOCATIONS.forEach(function(loc) {
+      const channels = getChannelsWithName(loc.id);
+      if (!channels.size) {
+        console.error('Could not find channels for location ' + loc.id);
+      } else {
+        channels.forEach((channel) => updateChannelTopic(loc, channel));
+      }
+    });
+    setTimeout(() => { updateChannelTopics(); }, REFRESH_INTERVAL);
+  }
 }
 
 bot.on('error', console.error);
+
 bot.on('message', message => {
-	if (message.content.substring(0, 1) == '!') {
-		var args = message.content.substring(1).split(' ');
-		var cmd = args[0];
-		var channel = message.channel.name;
-		if (cmd === 'whose') {
-			switch (channel) {
-				case 'dnb-milpitas':
-					message.channel.send("```" + milpitas.getOutput() + "```");
-					break;
-				case 'dnb-dalycity':
-					message.channel.send("```" + dalyCity.getOutput() + "```");
-					break;
-				case 'round1-concord':
-					message.channel.send("```" + concord.getOutput() + "```");
-					break;
-				case 'round1-sanjose':
-					message.channel.send("```" + sanJose.getOutput() + "```");
-					break;
-			}
-		} else if (cmd === 'yeet' && message.author.tag === process.env.ADMIN_TAG) {
-			switch(channel) {
-				case 'dnb-milpitas':
-					message.channel.send("```" + milpitas.getAll() + "```");
-					break;
-				case 'dnb-dalycity':
-					message.channel.send("```" + dalyCity.getAll() + "```");
-					break;
-				case 'round1-concord':
-					message.channel.send("```" + concord.getAll() + "```");
-					break;
-				case 'round1-sanjose':
-					message.channel.send("```" + sanJose.getAll() + "```");
-					break;
-			}
-		} else if (cmd == 'help') {
-			message.channel.send('Commands: !whose, !yeet');
-		} else if (cmd == 'reset' && message.author.tag === process.env.ADMIN_TAG) {
-			resetChannelTopics();
-			message.channel.send('Kill me.');
-		}
-	}
+  if (message.content.substring(0, 1) == '!') {
+    const cmd = message.content.substring(1).split(' ')[0];
+    const channel = message.channel;
+    const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
+
+    if (!shop) {
+      console.error('Could not find shop with id ' + channel.name);
+      return;
+    }
+
+    if (cmd === 'whose') {
+      channel.send('Git gud.');
+    } else if (cmd === 'here') {
+      channel.send("```" + shop.getRecentPlayers() + "```");
+    // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
+    // Does `tag` mean all roles? What happens if `author` has multiple roles?
+    } else if (message.author.tag === process.env.ADMIN_TAG) {
+      if (cmd === 'all') {
+        reportTodaysPlayers(channel, shop);
+      }
+    }
+  }
 });
-getInitialData(milpitas);
-getInitialData(sanJose);
-getInitialData(dalyCity);
-getInitialData(concord);
-updateChannelTopics();
-bot.login(process.env.CLIENT_TOKEN);
+
+// Initalize locations
+// TODO: Move location and bot-token data to a separate file outside of version control
+const ALL_LOCATIONS = [
+  new Location({
+    name: 'Round1 San Jose',
+    id: 'round1-sanjose',
+    timeZone: 'America/Los_Angeles',
+    cabs: [
+      new Cab(process.env.EACOOKIE_ROUND1SANJOSE_J),
+      new Cab(process.env.EACOOKIE_ROUND1SANJOSE_K),
+    ]
+  }),
+  new Location({
+    name: 'D&B Milpitas',
+    id: 'dnb-milpitas',
+    timeZone: 'America/Los_Angeles',
+    cabs: [
+      new Cab(process.env.EACOOKIE_DNBMILPITAS),
+    ]
+  }),
+  new Location({
+    name: 'D&B Daly City',
+    id: 'dnb-dalycity',
+    timeZone: 'America/Los_Angeles',
+    cabs: [
+      new Cab(process.env.EACOOKIE_DNBDALYCITY),
+    ]
+  }),
+  new Location({
+    name: 'Round1 Concord',
+    id: 'round1-concord',
+    timeZone: 'America/Los_Angeles',
+    cabs: [
+      new Cab(process.env.EACOOKIE_ROUND1CONCORD),
+    ]
+  }),
+];
+function getAllInitialData() {
+  ALL_LOCATIONS.forEach((loc) => getInitialData(loc));
+}
+
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+if (!DISCORD_BOT_TOKEN) {
+  console.error('Missing DISCORD_BOT_TOKEN environment variable.');
+  process.exit();
+}
+bot.login(DISCORD_BOT_TOKEN)
+  .then(getAllInitialData)
+  .then(updateChannelTopics);
