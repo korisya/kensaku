@@ -137,7 +137,7 @@ async function retrieveData(loc) {
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
   if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
-    yeet(loc);
+    reportTodaysPlayersAllGuilds(loc);
     loc.todaysPlayers = [];
   }
 
@@ -326,8 +326,12 @@ function pingChannel(channelName, message) {
   getChannelsWithName(channelName).forEach(channel => channel.send('```' + message + '```'));
 }
 
-function yeet(loc) {
-  getChannelsWithName(loc.id).forEach(channel => channel.send('```' + loc.getTodaysPlayers() + '```'));
+function reportTodaysPlayersAllGuilds(loc) {
+  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayers(channel, loc));
+}
+
+function reportTodaysPlayers(channel, loc) {
+  channel.send('```' + loc.getTodaysPlayers() + '```');
 }
 
 function updateChannelTopic(loc, channel) {
@@ -393,12 +397,11 @@ bot.on('message', message => {
       channel.send('Git gud.');
     } else if (cmd === 'here') {
       channel.send("```" + shop.getRecentPlayers() + "```");
+    // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
+    // Does `tag` mean all roles? What happens if `author` has multiple roles?
     } else if (message.author.tag === process.env.ADMIN_TAG) {
-      if (cmd === 'yeet') {
-        channel.send("```" + shop.getTodaysPlayers() + "```");
-      } else if (cmd === 'reset') {
-        resetChannelTopics();
-        channel.send('Kill me.');
+      if (cmd === 'all') {
+        reportTodaysPlayers(channel, shop);
       }
     }
   }
