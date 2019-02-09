@@ -19,6 +19,7 @@ function timeDifferential(nowTime, beforeTime) {
 }
 function timeString(time, timeZone) {
   return time.toLocaleTimeString([], {
+    hour12: true,
     hour: '2-digit',
     minute: '2-digit',
     timeZone: timeZone
@@ -116,33 +117,11 @@ async function getInitialData(loc) {
       throw err;
     });
   });
-  setTimeout(function() {
-    retrieveData(loc)
-  }, REFRESH_INTERVAL);
 }
 
-// Retrieves new data every minute
+// Retrieves new data
 async function retrieveData(loc) {
-  var currentTime = new Date();
-  // Autoyeet at 5am GMT+9 Tokyo (beginning of maintenance)
-  // TODO: For cabs on USA server, autoyeet/reset at 4am local time.
-  // For all other cabs (all on JP server), autoyeet/reset at the beginning of maintenance.
-  // The current deployment for USA cabs runs on GMT+0, so "12" means 4am GMT-8.
-
-  // Assumes that we run this client in GMT-8... :(
-  // TODO: Fix this so that we don't depend on the time zone which the client is run from.
-  // Might be easiest to hard-code to Tokyo
-  //
-  // What happens if people are playing during this hour?
-  // In Japan, should be impossible (daily maintenance or shop closed)
-  // In USA, everything should be closed
-  if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
-    reportTodaysPlayersAllGuilds(loc);
-    loc.todaysPlayers = [];
-  }
-
   console.log('--> ' + loc.name + ': Retrieving data...');
-
   for (let index = 0; index < loc.cabs.length; index++) {
     await rp(loc.cabs[index].requestDataOptions).then(($) => {
       if ($('.dancer_name').length === 0) {
@@ -167,24 +146,10 @@ async function retrieveData(loc) {
       console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data. @' + loc.name + '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
     });
   }
+}
 
-  loc.cabs.forEach(function(cab1) {
-    loc.cabs.forEach(function(cab2) {
-      if (cab1 !== cab2) {
-        cab1.newPlayers.forEach(function(newPlayer) {
-          var foundPlayer = cab2.players.find(function(player) {
-            return player.ddrCode === newPlayer.ddrCode;
-          });
-          if (foundPlayer) {
-            console.log('--> ' + loc.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
-            cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
-            cab2.prunedPlayers++;
-          }
-        });
-      }
-    });
-  });
-
+// Updates player lists using new data
+function updatePlayerLists(loc) {
   loc.cabs.forEach(function(cab) {
     if (!cab.players.length) {
       return;
@@ -302,8 +267,61 @@ async function retrieveData(loc) {
       }
     }
   });
+}
+
+// Removes players who move cabs
+function pruneData() {
+  console.log('Should see this after we retrieved all data.')
+  ALL_LOCATIONS.forEach(function(loc1) {
+    ALL_LOCATIONS.forEach(function(loc2) {
+      loc1.cabs.forEach(function(cab1) {
+        loc2.cabs.forEach(function(cab2) {
+          if (cab1 !== cab2) {
+            cab1.newPlayers.forEach(function(newPlayer) {
+              var foundPlayer = cab2.players.find(function(player) {
+                return player.ddrCode === newPlayer.ddrCode;
+              });
+              if (foundPlayer) {
+                console.log('--> ' + loc.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
+                cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
+                cab2.prunedPlayers++;
+              }
+            });
+          }
+        });
+      });
+    });
+  });
+}
+
+async function update() {
+  // Autoyeet at 5am GMT+9 Tokyo (beginning of maintenance)
+  // TODO: For cabs on USA server, autoyeet/reset at 4am local time.
+  // For all other cabs (all on JP server), autoyeet/reset at the beginning of maintenance.
+  // The current deployment for USA cabs runs on GMT+0, so "12" means 4am GMT-8.
+
+  // Assumes that we run this client in GMT-8... :(
+  // TODO: Fix this so that we don't depend on the time zone which the client is run from.
+  // Might be easiest to hard-code to Tokyo
+  //
+  // What happens if people are playing during this hour?
+  // In Japan, should be impossible (daily maintenance or shop closed)
+  // In USA, everything should be closed
+  var currentTime = new Date();
+  if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
+    reportTodaysPlayersAllGuilds(loc);
+    loc.todaysPlayers = [];
+  }
+
+  let promises = [];
+  ALL_LOCATIONS.forEach((loc) => promises.push(retrieveData(loc)));
+  Promise.all(promises).then(() => {
+    pruneData();
+    ALL_LOCATIONS.forEach((loc) => updatePlayerLists(loc));
+  });
+
   setTimeout(function() {
-    retrieveData(loc)
+    update()
   }, REFRESH_INTERVAL);
 }
 
@@ -445,8 +463,12 @@ const ALL_LOCATIONS = [
     ]
   }),
 ];
+
 function getAllInitialData() {
   ALL_LOCATIONS.forEach((loc) => getInitialData(loc));
+  setTimeout(function() {
+    update()
+  }, REFRESH_INTERVAL);
 }
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
