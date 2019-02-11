@@ -121,6 +121,26 @@ async function getInitialData(loc) {
 
 // Retrieves new data
 async function retrieveData(loc) {
+  // Autoyeet at 5am GMT+9 Tokyo (beginning of maintenance)
+  // TODO: For cabs on USA server, autoyeet/reset at 4am local time.
+  // For all other cabs (all on JP server), autoyeet/reset at the beginning of maintenance.
+  // The current deployment for USA cabs runs on GMT+0, so "12" means 4am GMT-8.
+
+  // Assumes that we run this client in GMT-8... :(
+  // TODO: Fix this so that we don't depend on the time zone which the client is run from.
+  // Might be easiest to hard-code to Tokyo
+  //
+  // What happens if people are playing during this hour?
+  // In Japan, should be impossible (daily maintenance or shop closed)
+  // In USA, everything should be closed
+  //
+  // Ideally this should be done in update() instead
+  var now = new Date();
+  if (now.getHours() == 12 && loc.todaysPlayers.length != 0) {
+    reportTodaysPlayersAllGuilds(loc);
+    loc.todaysPlayers = [];
+  }
+
   console.log('--> ' + loc.name + ': Retrieving data...');
   for (let index = 0; index < loc.cabs.length; index++) {
     await rp(loc.cabs[index].requestDataOptions).then(($) => {
@@ -271,7 +291,7 @@ function updatePlayerLists(loc) {
 
 // Removes players who move cabs
 function pruneData() {
-  console.log('Should see this after we retrieved all data.')
+  console.log('Pruning data. We should see this after we have retrieved all data.')
   ALL_LOCATIONS.forEach(function(loc1) {
     ALL_LOCATIONS.forEach(function(loc2) {
       loc1.cabs.forEach(function(cab1) {
@@ -282,7 +302,7 @@ function pruneData() {
                 return player.ddrCode === newPlayer.ddrCode;
               });
               if (foundPlayer) {
-                console.log('--> ' + loc.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
+                console.log('--> ' + loc2.name + ' to ' + loc1.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
                 cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
                 cab2.prunedPlayers++;
               }
@@ -295,24 +315,6 @@ function pruneData() {
 }
 
 async function update() {
-  // Autoyeet at 5am GMT+9 Tokyo (beginning of maintenance)
-  // TODO: For cabs on USA server, autoyeet/reset at 4am local time.
-  // For all other cabs (all on JP server), autoyeet/reset at the beginning of maintenance.
-  // The current deployment for USA cabs runs on GMT+0, so "12" means 4am GMT-8.
-
-  // Assumes that we run this client in GMT-8... :(
-  // TODO: Fix this so that we don't depend on the time zone which the client is run from.
-  // Might be easiest to hard-code to Tokyo
-  //
-  // What happens if people are playing during this hour?
-  // In Japan, should be impossible (daily maintenance or shop closed)
-  // In USA, everything should be closed
-  var currentTime = new Date();
-  if (currentTime.getHours() == 12 && loc.todaysPlayers.length != 0) {
-    reportTodaysPlayersAllGuilds(loc);
-    loc.todaysPlayers = [];
-  }
-
   let promises = [];
   ALL_LOCATIONS.forEach((loc) => promises.push(retrieveData(loc)));
   Promise.all(promises).then(() => {
