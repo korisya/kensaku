@@ -77,7 +77,7 @@ function Location (loc) {
     this.todaysPlayers.forEach(function(player) {
       const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
       if (timeSinceSeen.h < 2) {
-        const firstTimeString = timeString(player.firstTime, this.timeZone);
+        const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
         output += `${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago\n`;
       }
     });
