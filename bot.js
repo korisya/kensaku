@@ -374,9 +374,9 @@ function updateChannelTopic(loc, channel) {
     // TODO: Perhaps include the day's start time (local time per arcade)
     topic = `${nowString}: 0 players today.`;
   } else if (numPlayers === 0) {
-    const s = (loc.todaysPlayers.length === 1) ? '' : 's';
+    const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
-    topic = `${nowString}: All ${loc.todaysPlayers.length} player${s} today left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
+    topic = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
     const s = (numPlayers === 1) ? '' : 's';
     topic = `${nowString}: ${numPlayers} player${s} in the last hour. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
