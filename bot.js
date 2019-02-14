@@ -137,7 +137,7 @@ async function retrieveData(loc) {
   // Ideally this should be done in update() instead
   var now = new Date();
   if (now.getHours() == 12 && loc.todaysPlayers.length != 0) {
-    reportTodaysPlayersAllGuilds(loc);
+    reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
   }
 
@@ -347,11 +347,11 @@ function pingChannel(channelName, message) {
   getChannelsWithName(channelName).forEach(channel => channel.send('```' + message + '```'));
 }
 
-function reportTodaysPlayersAllGuilds(loc) {
-  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayers(channel, loc));
+function reportTodaysPlayers(loc) {
+  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc));
 }
 
-function reportTodaysPlayers(channel, loc) {
+function reportTodaysPlayersForChannel(channel, loc) {
   const message = '```' + loc.getTodaysPlayers() + '```';
   console.info('Sending message to ' + channel.name + ': ' + message);
   channel.send(message);
@@ -429,7 +429,7 @@ bot.on('message', message => {
     // Does `tag` mean all roles? What happens if `author` has multiple roles?
     } else if (message.author.tag === process.env.ADMIN_TAG) {
       if (cmd === 'all') {
-        reportTodaysPlayers(channel, shop);
+        reportTodaysPlayersForChannel(channel, shop);
       }
     }
   }
