@@ -216,9 +216,9 @@ function updatePlayerLists(loc) {
       } else {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        pingChannel(loc.id, `+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`);
+        pingChannel(loc.id, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
         if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-          pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${loc.id}! <:TFTI:483651827984760842>`);
+          pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${loc.id}! <:TFTI:483651827984760842>`);
         }
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
@@ -291,7 +291,7 @@ function updatePlayerLists(loc) {
       }
 
       if (str !== '') {
-        pingChannel(loc.id, str);
+        pingChannel(loc.id, monospace(str));
       }
     }
   });
@@ -350,9 +350,13 @@ function getChannelsWithName(name) {
   return bot.channels.filter(channel => channel.name === name);
 };
 
+function monospace(message) {
+  return '```' + message + '```';
+}
+
 function pingChannel(channelName, message) {
   console.info('Sending message to ' + channelName + ': ' + message);
-  getChannelsWithName(channelName).forEach(channel => channel.send('```' + message + '```'));
+  getChannelsWithName(channelName).forEach(channel => channel.send(message));
 }
 
 function reportTodaysPlayers(loc) {
