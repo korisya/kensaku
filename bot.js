@@ -5,6 +5,16 @@ const cheerio = require('cheerio');
 require('http').createServer().listen(3000);
 require('dotenv').config();
 
+// Special players
+const tftiPlayers = [
+  '51448180', // RCKYWONG
+  '51415530', // T3ALIZES
+  '51400807', // MEGUMIN
+  '51504563', // DEREKH
+  '51500816', // WINBER
+  '51407772', // ZEO
+];
+
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
 const REFRESH_INTERVAL = msMinute;
@@ -204,8 +214,12 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer), 1);
         loc.todaysPlayers.unshift(incomingPlayer);
       } else {
+        // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        pingChannel(loc.id, '+ ' + incomingPlayer.name + '    ' + incomingPlayer.ddrCode);
+        pingChannel(loc.id, `+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`);
+        if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
+          pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${loc.id}! <:TFTI:483651827984760842>`);
+        }
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
       // how are we going to get total session times? yay now it's ez
