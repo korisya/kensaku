@@ -343,6 +343,7 @@ function getChannelsWithName(name) {
 };
 
 function pingChannel(channelName, message) {
+  console.info('Sending message to ' + channelName + ': ' + message);
   getChannelsWithName(channelName).forEach(channel => channel.send('```' + message + '```'));
 }
 
@@ -351,7 +352,9 @@ function reportTodaysPlayersAllGuilds(loc) {
 }
 
 function reportTodaysPlayers(channel, loc) {
-  channel.send('```' + loc.getTodaysPlayers() + '```');
+  const message = '```' + loc.getTodaysPlayers() + '```';
+  console.info('Sending message to ' + channel.name + ': ' + message);
+  channel.send(message);
 }
 
 function updateChannelTopic(loc, channel) {
@@ -406,6 +409,8 @@ bot.on('error', console.error);
 bot.on('message', message => {
   if (message.content.substring(0, 1) == '!') {
     const cmd = message.content.substring(1).split(' ')[0];
+    console.info('Command ' + cmd + ' received from ' + message.author.tag);
+
     const channel = message.channel;
     const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
 
@@ -417,7 +422,9 @@ bot.on('message', message => {
     if (cmd === 'whose') {
       channel.send('Git gud.');
     } else if (cmd === 'here') {
-      channel.send("```" + shop.getRecentPlayers() + "```");
+      const message = "```" + shop.getRecentPlayers() + "```";
+      console.info('Sending message to ' + message.channel.name + ': ' + message);
+      channel.send(message);
     // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
     // Does `tag` mean all roles? What happens if `author` has multiple roles?
     } else if (message.author.tag === process.env.ADMIN_TAG) {
