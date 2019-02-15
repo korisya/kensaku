@@ -121,18 +121,15 @@ async function getInitialData(loc) {
 
 // Retrieves new data
 async function retrieveData(loc) {
-  // Assumes that we run this client in GMT-8... :(
-  // TODO: Fix this so that we don't depend on the time zone which the client is run from.
-  // Might be easiest to hard-code to Tokyo
-  //
-  // What happens if people are playing during this hour?
+  // What happens if people are playing during this hour? This would run multiple times in the hour
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
   //
   // Ideally this should be done in update() instead
   var now = new Date();
-  const usShouldReport = loc.timeZone.startsWith('America') && now.getHours() === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 4am at the location's local time. Not important.
-  const jpShouldReport = !loc.timeZone.startsWith('America') && now.getHours() === 20; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
+  const clientHoursBehindUtc = now.getTimezoneOffset() / 60; // This could be static at boot time, but runtime would support changing time zones during runtime
+  const usShouldReport = loc.timeZone.startsWith('America') && (now.getHours() + clientHoursBehindUtc) === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 4am at the location's local time. Not important.
+  const jpShouldReport = !loc.timeZone.startsWith('America') && (now.getHours() + clientHoursBehindUtc) === 20; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
   if (loc.todaysPlayers.length !== 0 && (usShouldReport || jpShouldReport)) {
     reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
