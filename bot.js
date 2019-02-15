@@ -121,11 +121,6 @@ async function getInitialData(loc) {
 
 // Retrieves new data
 async function retrieveData(loc) {
-  // Autoyeet at 5am GMT+9 Tokyo (beginning of maintenance)
-  // TODO: For cabs on USA server, autoyeet/reset at 4am local time.
-  // For all other cabs (all on JP server), autoyeet/reset at the beginning of maintenance.
-  // The current deployment for USA cabs runs on GMT+0, so "12" means 4am GMT-8.
-
   // Assumes that we run this client in GMT-8... :(
   // TODO: Fix this so that we don't depend on the time zone which the client is run from.
   // Might be easiest to hard-code to Tokyo
@@ -136,7 +131,9 @@ async function retrieveData(loc) {
   //
   // Ideally this should be done in update() instead
   var now = new Date();
-  if (now.getHours() == 12 && loc.todaysPlayers.length != 0) {
+  const usShouldReport = loc.timeZone.startsWith('America') && now.getHours() === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 4am at the location's local time. Not important.
+  const jpShouldReport = !loc.timeZone.startsWith('America') && now.getHours() === 20; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
+  if (loc.todaysPlayers.length !== 0 && (usShouldReport || jpShouldReport)) {
     reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
   }
