@@ -434,9 +434,9 @@ bot.on('message', message => {
     if (cmd === 'whose') {
       channel.send('Git gud.');
     } else if (cmd === 'here') {
-      const message = "```" + shop.getRecentPlayers() + "```";
-      console.info('Sending message to ' + message.channel.name + ': ' + message);
-      channel.send(message);
+      const response = "```" + shop.getRecentPlayers() + "```";
+      console.info('Sending message to ' + channel.name + ': ' + response);
+      channel.send(response);
     // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
     // Does `tag` mean all roles? What happens if `author` has multiple roles?
     } else if (message.author.tag === process.env.ADMIN_TAG) {
