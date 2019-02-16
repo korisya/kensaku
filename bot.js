@@ -83,29 +83,29 @@ function Location (loc) {
 
   this.getRecentPlayers = function () {
     const currentTime = new Date();
-    let output = '';
+    const playerStrings = [];
     // TODO: Use a reduce function
     this.todaysPlayers.forEach(function(player) {
       const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
       if (timeSinceSeen.h < 2) {
         const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
-        output += `${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago\n`;
+        playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
       }
     });
-    return output || ' ';
+    return playerStrings;
   };
 
   this.getTodaysPlayers = function () {
     const currentTime = new Date();
-    let output = '';
+    const playerStrings = [];
     // TODO: Use a reduce function
     this.todaysPlayers.forEach(function(player) {
       const firstTime = timeString(player.firstTime, player.loc.timeZone);
       const lastTime = timeString(player.lastTime, player.loc.timeZone);
       const timePlayed = timeDifferential(player.lastTime, player.firstTime);
-      output += `${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})\n`;
+      playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
     });
-    return output || ' ';
+    return playerStrings;
   };
 }
 
@@ -357,7 +357,7 @@ function getChannelsWithName(name) {
 };
 
 function monospace(message) {
-  return '```' + message + '```';
+  return '```' + (message || ' ') + '```';
 }
 
 function pingChannel(channelName, message) {
@@ -370,12 +370,14 @@ function reportTodaysPlayers(loc) {
 }
 
 function reportTodaysPlayersForChannel(channel, loc) {
-  const message = '```' + loc.getTodaysPlayers() + '```';
+  const todaysPlayers = loc.getTodaysPlayers();
+  const s = todaysPlayers.length === 1 ? '' : 's';
+  const message = `${todaysPlayers.length} player${s} today:` + monospace(todaysPlayers.join('\n'));
   console.info('Sending message to ' + channel.name + ': ' + message);
   channel.send(message);
 }
 
-function updateChannelTopic(loc, channel) {
+function summaryHereString(loc) {
   const currentTime = new Date();
   const nowString = timeString(currentTime, loc.timeZone);
 
@@ -384,25 +386,30 @@ function updateChannelTopic(loc, channel) {
 
   loc.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-    if (timeSinceSeen.h < 1) {
+    if (timeSinceSeen.h < 2) {
       numPlayers++;
       playerNamesTimes.push(`${player.name} ${timeSinceSeen.m}m`);
     }
   });
 
-  let topic;
+  let summaryHereString;
   if (loc.todaysPlayers.length === 0) {
     // TODO: Perhaps include the day's start time (local time per arcade)
-    topic = `${nowString}: 0 players today.`;
+    summaryHereString = `${nowString}: 0 players today.`;
   } else if (numPlayers === 0) {
     const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
-    topic = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
+    summaryHereString = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
     const s = (numPlayers === 1) ? '' : 's';
-    topic = `${nowString}: ${numPlayers} player${s} in the last hour. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
+    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last 2 hours. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
   }
-  channel.setTopic(topic)
+
+  return summaryHereString;
+}
+
+function updateChannelTopic(loc, channel) {
+  channel.setTopic(summaryHereString(loc))
     .then(updated => console.log(`Updated topic #${loc.id}: ${updated.topic}`))
     // TODO: log loc.id
     .catch((error) => console.error('Failed to update ' + loc.id, error));
@@ -438,10 +445,11 @@ bot.on('message', message => {
     }
 
     if (cmd === 'whose') {
-      channel.send('Git gud.');
+      channel.send('Check the channel topic. Use `!here` if you really need it saved in message history.');
     } else if (cmd === 'here') {
-      const response = "```" + shop.getRecentPlayers() + "```";
-      console.info('Sending message to ' + channel.name + ': ' + response);
+      const recentPlayers = shop.getRecentPlayers();
+      const response = "Check the channel topic.\n\n" + summaryHereString(shop) + monospace(recentPlayers.join('\n'));
+      console.info('Sending message to channel #', channel.name, ':', response);
       channel.send(response);
     // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
     // Does `tag` mean all roles? What happens if `author` has multiple roles?
@@ -453,7 +461,7 @@ bot.on('message', message => {
   }
 });
 
-// Initalize locations
+// Initialize locations
 // TODO: Move location and bot-token data to a separate file outside of version control
 const ALL_LOCATIONS = [
   new Location({
