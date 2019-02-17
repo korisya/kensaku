@@ -109,6 +109,12 @@ function Location (loc) {
   };
 }
 
+function tftiCheck(incomingPlayer, locationId) {
+  if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
+    pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${locationId}! <:TFTI:483651827984760842>`);
+  }
+}
+
 // Gets initial data
 async function getInitialData(loc) {
   loc.cabs.forEach(async function(cab) {
@@ -217,9 +223,7 @@ function updatePlayerLists(loc) {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
         pingChannel(loc.id, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
-        if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-          pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${loc.id}! <:TFTI:483651827984760842>`);
-        }
+        tftiCheck(incomingPlayer, loc.id);
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
       // how are we going to get total session times? yay now it's ez
@@ -278,6 +282,7 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.unshift(incomingPlayer1);
         str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
+        tftiCheck(incomingPlayer1, loc.id);
       }
 
       if (foundTodaysPlayer0) {
@@ -288,6 +293,7 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.unshift(incomingPlayer0);
         str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer0.toLocaleString());
+        tftiCheck(incomingPlayer0, loc.id);
       }
 
       if (str !== '') {
