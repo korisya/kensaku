@@ -15,6 +15,9 @@ const tftiPlayers = [
   '51407772', // ZEO
   '51502133', // ORANGEEE
 ];
+//const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
+//const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
+const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Stalking
 
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
@@ -112,7 +115,7 @@ function Location (loc) {
 
 function tftiCheck(incomingPlayer, locationId) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-    pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${locationId}! <:TFTI:483651827984760842>`);
+    pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${locationId}! ${tftiEmoji}`);
   }
 }
 
@@ -406,7 +409,7 @@ function summaryHereString(loc) {
     summaryHereString = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
     const s = (numPlayers === 1) ? '' : 's';
-    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last 2 hours. :eyes: <:TFTI:483651827984760842> (${playerNamesTimes.join(', ')})`;
+    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last 2 hours. :eyes: ${tftiEmoji} (${playerNamesTimes.join(', ')})`;
   }
 
   return summaryHereString;
