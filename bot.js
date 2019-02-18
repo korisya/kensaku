@@ -123,7 +123,8 @@ function tftiCheck(incomingPlayer, locationId) {
 async function getInitialData(loc) {
   loc.cabs.forEach(async function(cab) {
     await rp(cab.requestDataOptions).then(($) => {
-      const dancerCount = $('.dancer_name').get().length - 1; // First one is row header
+      const dancerRows = $('.dancer_name').get().length; // Includes 1 header row
+      const dancerCount = dancerRows === 0 ? 0 : dancerRows - 1; // Maintenance has 0 rows; otherwise, subtract the 1 header row
       console.log(`getInitialData ${loc.id} found ${dancerCount} dancers:`);
       // Parses data
       for (var dancerIndex = 1; dancerIndex <= Math.min(dancerCount, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
@@ -136,19 +137,18 @@ async function getInitialData(loc) {
         console.log('--> ' + loc.name + ': Player ' + dancerIndex + ' received - ' + cab.players[dancerIndex-1].toLocaleString());
       }
     }).catch((err) => {
-      console.log('--> Failed to get initial data. Restart the bot.')
+      console.error('--> Failed to get initial data. Restart the bot.')
       throw err;
     });
   });
 }
 
 // Retrieves new data
+// Ideally this should be done in update() instead
 async function retrieveData(loc) {
   // What happens if people are playing during this hour? This would run multiple times in the hour
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
-  //
-  // Ideally this should be done in update() instead
   var now = new Date();
   const clientHoursBehindUtc = now.getTimezoneOffset() / 60; // This could be static at boot time, but runtime would support changing time zones during runtime
   const usShouldReport = loc.timeZone.startsWith('America') && (now.getHours() + clientHoursBehindUtc) === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 4am at the location's local time. Not important.
