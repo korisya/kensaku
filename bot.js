@@ -119,9 +119,12 @@ function tftiCheck(incomingPlayer, locationId) {
 async function getInitialData(loc) {
   loc.cabs.forEach(async function(cab) {
     await rp(cab.requestDataOptions).then(($) => {
+      const dancerCount = $('.dancer_name').get().length - 1; // First one is row header
+      console.log(`getInitialData ${loc.id} found ${dancerCount} dancers:`);
       // Parses data
-      for (var dancerIndex = 1; dancerIndex < $('.dancer_name').get().length - 13; dancerIndex++) { // dancerIndex = 1 because first value isn't a player name
+      for (var dancerIndex = 1; dancerIndex <= Math.min(dancerCount, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
         cab.players[dancerIndex-1] = new Player({
+          // $('.dancer_name').eq(0) is a row header, so store row 1 in players[0]
           dancerName: $('.dancer_name').eq(dancerIndex).text(),
           ddrCode: $('.code').eq(dancerIndex).text(),
           loc: loc
