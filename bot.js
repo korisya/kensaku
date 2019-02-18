@@ -13,6 +13,7 @@ const tftiPlayers = [
   '51504563', // DEREKH
   '51500816', // WINBER
   '51407772', // ZEO
+  '51502133', // ORANGEEE
 ];
 
 const msMinute = 60*1000;
