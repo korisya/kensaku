@@ -25,9 +25,11 @@ const REFRESH_INTERVAL = msMinute;
 function timeDifferential(nowTime, beforeTime) {
   const hr = Math.floor((nowTime - beforeTime) / msHour);
   const min = Math.floor(((nowTime - beforeTime) % msHour) / msMinute);
+  const minOnly = Math.floor((nowTime - beforeTime) / msMinute);
   return {
     h: hr,
     m: min,
+    minOnly: minOnly,
     str: `${hr}h ${min}m`
   };
 }
@@ -91,7 +93,7 @@ function Location (loc) {
     // TODO: Use a reduce function
     this.todaysPlayers.forEach(function(player) {
       const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-      if (timeSinceSeen.h < 2) {
+      if (timeSinceSeen.minOnly <= 90) {
         const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
         playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
       }
@@ -393,9 +395,9 @@ function summaryHereString(loc) {
 
   loc.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-    if (timeSinceSeen.h < 2) {
+    if (timeSinceSeen.minOnly <= 90) {
       numPlayers++;
-      playerNamesTimes.push(`${player.name} ${timeSinceSeen.m}m`);
+      playerNamesTimes.push(`${player.name} ${timeSinceSeen.minOnly}m`);
     }
   });
 
