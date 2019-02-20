@@ -22,7 +22,6 @@ const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Stalking
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
 const RECENT_PLAYER_CUTOFF_MINUTES = 90;
-const RECENT_PLAYER_CUTOFF_HOURS = RECENT_PLAYER_CUTOFF_MINUTES / 60;
 const REFRESH_INTERVAL = msMinute;
 function timeDifferential(nowTime, beforeTime) {
   const hr = Math.floor((nowTime - beforeTime) / msHour);
@@ -403,7 +402,6 @@ function summaryHereString(loc) {
 
   let summaryHereString;
   if (loc.todaysPlayers.length === 0) {
-    // TODO: Perhaps include the day's start time (local time per arcade)
     summaryHereString = `${nowString}: 0 players today.`;
   } else if (numPlayers === 0) {
     const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
@@ -411,7 +409,7 @@ function summaryHereString(loc) {
     summaryHereString = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
     const s = (numPlayers === 1) ? '' : 's';
-    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last ${RECENT_PLAYER_CUTOFF_HOURS} hours. :eyes: ${tftiEmoji} (${playerNamesTimes.join(', ')})`;
+    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji} (${playerNamesTimes.join(', ')})`;
   }
 
   return summaryHereString;
