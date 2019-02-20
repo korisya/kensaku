@@ -44,8 +44,6 @@ function timeString(time, timeZone) {
   });
 }
 
-var killBot = false;
-
 // Constructor for Players
 function Player (args) {
   this.name = args.dancerName;
@@ -422,22 +420,19 @@ function summaryHereString(loc) {
 function updateChannelTopic(loc, channel) {
   channel.setTopic(summaryHereString(loc))
     .then(updated => console.log(`Updated topic #${loc.id}: ${updated.topic}`))
-    // TODO: log loc.id
     .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
 async function updateChannelTopics() {
-  if (!killBot) {
-    ALL_LOCATIONS.forEach(function(loc) {
-      const channels = getChannelsWithName(loc.id);
-      if (!channels.size) {
-        console.error('Could not find channels for location ' + loc.id);
-      } else {
-        channels.forEach((channel) => updateChannelTopic(loc, channel));
-      }
-    });
-    setTimeout(() => { updateChannelTopics(); }, REFRESH_INTERVAL);
-  }
+  ALL_LOCATIONS.forEach(function(loc) {
+    const channels = getChannelsWithName(loc.id);
+    if (!channels.size) {
+      console.error('Could not find channels for location ' + loc.id);
+    } else {
+      channels.forEach((channel) => updateChannelTopic(loc, channel));
+    }
+  });
+  setTimeout(() => { updateChannelTopics(); }, REFRESH_INTERVAL);
 }
 
 bot.on('error', console.error);
