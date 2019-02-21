@@ -116,7 +116,18 @@ function Location (loc) {
 
 function tftiCheck(incomingPlayer, locationId) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-    pingChannel('tfti', `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${locationId}! ${tftiEmoji}`);
+    const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${locationId}! ${tftiEmoji}`;
+    const messagePromises = pingChannel('tfti', tftiMessage);
+    messagePromises.forEach((messagePromise) => {
+      messagePromise.then((message) => {
+        const tftiEmojiForThisGuildMessage = message.guild.emojis.find((emoji) => emoji.name === 'TFTI');
+        if (!tftiEmojiForThisGuildMessage) {
+          console.error('Could not find TFTI emoji in guild ' + message.guild.name);
+        } else {
+          message.react(tftiEmojiForThisGuildMessage);
+        }
+      });
+    });
   }
 }
 
@@ -370,7 +381,7 @@ function monospace(message) {
 
 function pingChannel(channelName, message) {
   console.info('Sending message to ' + channelName + ': ' + message);
-  getChannelsWithName(channelName).forEach(channel => channel.send(message));
+  return getChannelsWithName(channelName).map(channel => channel.send(message));
 }
 
 function reportTodaysPlayers(loc) {
