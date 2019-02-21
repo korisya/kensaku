@@ -350,18 +350,18 @@ async function update() {
 }
 
 // Initialize Discord Bot
-var bot = new Discord.Client();
+var client = new Discord.Client();
 
-bot.on('ready', () => {
+client.on('ready', () => {
   console.log('Connected');
-  console.log(`Logged in as ${bot.user.tag}!`);
-  console.log(bot.user.username + ' - (' + bot.user.id + ')');
+  console.log(`Logged in as ${client.user.tag}!`);
+  console.log(client.user.username + ' - (' + client.user.id + ')');
 });
 
 // Reused in a few places
 // Plus we have the same channel name on multiple guilds
 function getChannelsWithName(name) {
-  return bot.channels.filter(channel => channel.name === name);
+  return client.channels.filter(channel => channel.name === name);
 };
 
 function monospace(message) {
@@ -433,9 +433,9 @@ async function updateChannelTopics() {
   setTimeout(() => { updateChannelTopics(); }, REFRESH_INTERVAL);
 }
 
-bot.on('error', console.error);
+client.on('error', console.error);
 
-bot.on('message', message => {
+client.on('message', message => {
   if (message.content.substring(0, 1) == '!') {
     const cmd = message.content.substring(1).split(' ')[0];
     console.info('Command ' + cmd + ' received from ' + message.author.tag);
@@ -515,6 +515,6 @@ if (!DISCORD_BOT_TOKEN) {
   console.error('Missing DISCORD_BOT_TOKEN environment variable.');
   process.exit();
 }
-bot.login(DISCORD_BOT_TOKEN)
+client.login(DISCORD_BOT_TOKEN)
   .then(getAllInitialData)
   .then(updateChannelTopics);
