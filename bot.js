@@ -121,7 +121,7 @@ function tftiCheck(incomingPlayer, locationId) {
       const locationIdString = locationIdChannel ? locationIdChannel.toString() : '#' + locationId;
 
       const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find((emoji) => emoji.name === 'TFTI');
-      const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${locationIdString} ${tftiEmojiForThisGuild}`;
+      const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${locationIdString}! ${tftiEmojiForThisGuild}`;
 
       console.info(`Sending message to ${tftiChannel.guild.name}/#tfti: ${tftiMessage}`);
       tftiChannel.send(tftiMessage).then((message) => {
