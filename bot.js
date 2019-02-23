@@ -116,16 +116,16 @@ function Location (loc) {
 
 function tftiCheck(incomingPlayer, locationId) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-    const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at #${locationId}! ${tftiEmoji}`;
-    const messagePromises = pingChannel('tfti', tftiMessage);
-    messagePromises.forEach((messagePromise) => {
-      messagePromise.then((message) => {
-        const tftiEmojiForThisGuildMessage = message.guild.emojis.find((emoji) => emoji.name === 'TFTI');
-        if (!tftiEmojiForThisGuildMessage) {
-          console.error('Could not find TFTI emoji in guild ' + message.guild.name);
-        } else {
-          message.react(tftiEmojiForThisGuildMessage);
-        }
+    getChannelsWithName('tfti').map((tftiChannel) => {
+      const locationIdChannel = tftiChannel.guild.channels.find(c => c.name === locationId);
+      const locationIdString = locationIdChannel ? locationIdChannel.toString() : '#' + locationId;
+
+      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find((emoji) => emoji.name === 'TFTI');
+      const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${locationIdString}! ${tftiEmojiForThisGuild}`;
+
+      console.info(`Sending message to ${tftiChannel.guild.name}/#tfti: ${tftiMessage}`);
+      tftiChannel.send(tftiMessage).then((message) => {
+        message.react(tftiEmojiForThisGuild);
       });
     });
   }
@@ -380,8 +380,11 @@ function monospace(message) {
 }
 
 function pingChannel(channelName, message) {
-  console.info('Sending message to ' + channelName + ': ' + message);
-  return getChannelsWithName(channelName).map(channel => channel.send(message));
+  console.info('pingChannel ' + channelName + ': ' + message);
+  return getChannelsWithName(channelName).map((channel) => {
+    console.info(`Sending message to ${channel.guild.name}/#${channelName}: ${message}`);
+    channel.send(message);
+  });
 }
 
 function reportTodaysPlayers(loc) {
@@ -428,7 +431,7 @@ function summaryHereString(loc) {
 
 function updateChannelTopic(loc, channel) {
   channel.setTopic(summaryHereString(loc))
-    .then(updated => console.log(`Updated topic #${loc.id}: ${updated.topic}`))
+    .then(updated => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
     .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
@@ -464,7 +467,7 @@ client.on('message', message => {
     } else if (cmd === 'here') {
       const recentPlayers = shop.getRecentPlayers();
       const response = "Check the channel topic.\n\n" + summaryHereString(shop) + monospace(recentPlayers.join('\n'));
-      console.info('Sending message to channel #', channel.name, ':', response);
+      console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
       channel.send(response);
     // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
     // Does `tag` mean all roles? What happens if `author` has multiple roles?
