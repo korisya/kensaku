@@ -1,0 +1,17 @@
+{
+  "discordBotToken": "FILL_ME_IN",
+  "adminDiscordTags": [
+    "t3a#5609",
+    "rw#0628"
+  ],
+  "shops": [
+    {
+      "id": "round1-sanjose",
+      "timeZone": "America/Los_Angeles",
+      "cookies": [
+        "fillllll-meee-innn-with-cookievaluee",
+        "fillllll-meee-innn-with-cookievaluee"
+      ]
+    }
+  ]
+}

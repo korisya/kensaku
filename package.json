@@ -1,6 +1,6 @@
 {
   "name": "kensaku-bot",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "A DDR A machine-stalking bot.",
   "main": "bot.js",
   "scripts": {
@@ -9,8 +9,8 @@
   "author": "t3a",
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
+    "config": "^3.0.1",
     "discord.js": "^11.4.2",
-    "dotenv": "^6.2.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.2",
     "tough-cookie": "^2.4.3"

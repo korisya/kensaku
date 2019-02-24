@@ -3,7 +3,9 @@ var rp = require('request-promise');
 var tough = require('tough-cookie');
 const cheerio = require('cheerio');
 require('http').createServer().listen(3000);
-require('dotenv').config();
+const config = require('config');
+
+const adminDiscordTags = config.get('adminDiscordTags');
 
 // Special players
 const tftiPlayers = [
@@ -52,6 +54,7 @@ function Player (args) {
   this.firstTime = new Date();
   this.lastTime = new Date();
 
+  // TODO: Fix constructing the same function repeatedly for every Player instance
   this.toLocaleString = function () {
     return this.name + ' ' + this.ddrCode;
   };
@@ -133,6 +136,7 @@ function tftiCheck(incomingPlayer, locationId) {
 
 // Gets initial data
 async function getInitialData(loc) {
+  console.log(`getInitialData ${loc.id}`);
   loc.cabs.forEach(async function(cab) {
     await rp(cab.requestDataOptions).then(($) => {
       const dancerRows = $('.dancer_name').get().length; // Includes 1 header row
@@ -348,7 +352,7 @@ function pruneData() {
 }
 
 async function update() {
-  let promises = [];
+  const promises = [];
   ALL_LOCATIONS.forEach((loc) => promises.push(retrieveData(loc)));
   Promise.all(promises).then(() => {
     pruneData();
@@ -356,7 +360,7 @@ async function update() {
   });
 
   setTimeout(function() {
-    update()
+    update();
   }, REFRESH_INTERVAL);
 }
 
@@ -430,13 +434,14 @@ function summaryHereString(loc) {
 }
 
 function updateChannelTopic(loc, channel) {
+  console.log(`updateChannelTopic ${loc.id}`);
   channel.setTopic(summaryHereString(loc))
     .then(updated => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
     .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
 async function updateChannelTopics() {
-  ALL_LOCATIONS.forEach(function(loc) {
+  ALL_LOCATIONS.forEach((loc) => {
     const channels = getChannelsWithName(loc.id);
     if (!channels.size) {
       console.error('Could not find channels for location ' + loc.id);
@@ -469,9 +474,7 @@ client.on('message', message => {
       const response = "Check the channel topic.\n\n" + summaryHereString(shop) + monospace(recentPlayers.join('\n'));
       console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
       channel.send(response);
-    // What is the expected value of ADMIN_TAG? Is it something that would be reasonable to put in code?
-    // Does `tag` mean all roles? What happens if `author` has multiple roles?
-    } else if (message.author.tag === process.env.ADMIN_TAG) {
+    } else if (adminDiscordTags.includes(message.author.tag)) {
       if (cmd === 'all') {
         reportTodaysPlayersForChannel(channel, shop);
       }
@@ -480,53 +483,29 @@ client.on('message', message => {
 });
 
 // Initialize locations
-// TODO: Move location and bot-token data to a separate file outside of version control
-const ALL_LOCATIONS = [
-  new Location({
-    name: 'Round1 San Jose',
-    id: 'round1-sanjose',
-    timeZone: 'America/Los_Angeles',
-    cabs: [
-      new Cab(process.env.EACOOKIE_ROUND1SANJOSE_J),
-      new Cab(process.env.EACOOKIE_ROUND1SANJOSE_K),
-    ]
-  }),
-  new Location({
-    name: 'D&B Milpitas',
-    id: 'dnb-milpitas',
-    timeZone: 'America/Los_Angeles',
-    cabs: [
-      new Cab(process.env.EACOOKIE_DNBMILPITAS),
-    ]
-  }),
-  new Location({
-    name: 'D&B Daly City',
-    id: 'dnb-dalycity',
-    timeZone: 'America/Los_Angeles',
-    cabs: [
-      new Cab(process.env.EACOOKIE_DNBDALYCITY),
-    ]
-  }),
-  new Location({
-    name: 'Round1 Concord',
-    id: 'round1-concord',
-    timeZone: 'America/Los_Angeles',
-    cabs: [
-      new Cab(process.env.EACOOKIE_ROUND1CONCORD),
-    ]
-  }),
-];
+const CONFIG_LOCATIONS = config.get('shops') || [];
+const ALL_LOCATIONS = CONFIG_LOCATIONS.map((shop) => {
+  return new Location({
+    name: shop.id,
+    id: shop.id,
+    timeZone: shop.timeZone,
+    cabs: shop.cookies.map((cookie) => {return new Cab(cookie);}),
+  });
+});
 
 function getAllInitialData() {
-  ALL_LOCATIONS.forEach((loc) => getInitialData(loc));
+  console.log('getAllInitialData');
   setTimeout(function() {
-    update()
+    update();
   }, REFRESH_INTERVAL);
+
+  const promises = ALL_LOCATIONS.map(loc => {return getInitialData(loc);});
+  return Promise.all(promises);
 }
 
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const DISCORD_BOT_TOKEN = config.get('discordBotToken');
 if (!DISCORD_BOT_TOKEN) {
-  console.error('Missing DISCORD_BOT_TOKEN environment variable.');
+  console.error('Missing discordBotToken config key.');
   process.exit();
 }
 client.login(DISCORD_BOT_TOKEN)
