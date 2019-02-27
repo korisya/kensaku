@@ -108,8 +108,8 @@ function Location (loc) {
     const playerStrings = [];
     // TODO: Use a reduce function
     this.todaysPlayers.forEach(function(player) {
-      const firstTime = timeString(player.firstTime, player.loc.timeZone);
-      const lastTime = timeString(player.lastTime, player.loc.timeZone);
+      const firstTime = timeString(player.firstTime, player.loc.timeZone).padStart(8);
+      const lastTime = timeString(player.lastTime, player.loc.timeZone).padStart(8);
       const timePlayed = timeDifferential(player.lastTime, player.firstTime);
       playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
     });
@@ -245,7 +245,7 @@ function updatePlayerLists(loc) {
       } else {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        pingChannel(loc.id, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+        pingChannel(loc.id, monospace(`+ ${incomingPlayer.name.padEnd(8)}     ${incomingPlayer.ddrCode}`));
         tftiCheck(incomingPlayer, loc.id);
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
