@@ -355,11 +355,13 @@ function pruneData() {
 }
 
 async function update() {
-  const promises = [];
-  ALL_LOCATIONS.forEach((loc) => promises.push(retrieveData(loc)));
+  const promises = ALL_LOCATIONS.map(loc => retrieveData(loc));
   Promise.all(promises).then(() => {
     pruneData();
-    ALL_LOCATIONS.forEach((loc) => updatePlayerLists(loc));
+    ALL_LOCATIONS.forEach((loc) => {
+      updatePlayerLists(loc);
+      updateChannelsTopicForLocation(loc);
+    });
   });
 
   setTimeout(function() {
@@ -437,22 +439,18 @@ function summaryHereString(loc) {
 }
 
 function updateChannelTopic(loc, channel) {
-  console.log(`updateChannelTopic ${loc.id}`);
   channel.setTopic(summaryHereString(loc))
     .then(updated => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
     .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
-async function updateChannelTopics() {
-  ALL_LOCATIONS.forEach((loc) => {
-    const channels = getChannelsWithName(loc.id);
-    if (!channels.size) {
-      console.error('Could not find channels for location ' + loc.id);
-    } else {
-      channels.forEach((channel) => updateChannelTopic(loc, channel));
-    }
-  });
-  setTimeout(() => { updateChannelTopics(); }, REFRESH_INTERVAL);
+function updateChannelsTopicForLocation(loc) {
+  const channels = getChannelsWithName(loc.id);
+  if (!channels.size) {
+    console.error('Could not find channels for location ' + loc.id);
+  } else {
+    channels.forEach((channel) => updateChannelTopic(loc, channel));
+  }
 }
 
 client.on('error', console.error);
@@ -502,7 +500,11 @@ function getAllInitialData() {
     update();
   }, REFRESH_INTERVAL);
 
-  const promises = ALL_LOCATIONS.map(loc => {return getInitialData(loc);});
+  const promises = ALL_LOCATIONS.map(loc => {
+    return Promise.all(getInitialData(loc)).then(() => {
+      updateChannelsTopicForLocation(loc);
+    });
+  });
   return Promise.all(promises);
 }
 
@@ -513,7 +515,6 @@ if (!DISCORD_BOT_TOKEN) {
 }
 client.login(DISCORD_BOT_TOKEN)
   .then(getAllInitialData)
-  .then(updateChannelTopics);
   .catch((err) => {
     console.error('--> Failed to get initial data. Restart the bot.')
     throw err;
