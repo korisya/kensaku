@@ -61,12 +61,13 @@ function Player (args) {
 }
 
 // Constructor for cabs
-function Cab (cookie) {
+function Cab (cookieValue) {
   this.players = [];
   this.newPlayers = [];
+  this.cookieValue = cookieValue;
   this.cookie = new tough.Cookie({
     key: "M573SSID",
-    value: cookie,
+    value: cookieValue,
     domain: 'p.eagate.573.jp',
     httpOnly: true,
     maxAge: 31536000
@@ -135,13 +136,18 @@ function tftiCheck(incomingPlayer, locationId) {
 }
 
 // Gets initial data
-async function getInitialData(loc) {
+// Ideally, we'd just retrieveData() or do whatever we do repeatedly (no special case and no duplicated code for the first run)
+function getInitialData(loc) {
   console.log(`getInitialData ${loc.id}`);
-  loc.cabs.forEach(async function(cab) {
-    await rp(cab.requestDataOptions).then(($) => {
+  return loc.cabs.map(function(cab, index) {
+    return rp(cab.requestDataOptions).then(($) => {
       const dancerRows = $('.dancer_name').get().length; // Includes 1 header row
-      const dancerCount = dancerRows === 0 ? 0 : dancerRows - 1; // Maintenance has 0 rows; otherwise, subtract the 1 header row
-      console.log(`getInitialData ${loc.id} found ${dancerCount} dancers:`);
+      if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance. We have to restart.
+        throw new Error(`0 dancers found at ${loc.id} cab${index}. Restart the bot.`);
+      }
+
+      const dancerCount = dancerRows - 1; // Subtract the 1 header row
+      console.log(`getInitialData ${loc.id} @cab${index} found ${dancerCount} dancers:`);
       // Parses data
       for (var dancerIndex = 1; dancerIndex <= Math.min(dancerCount, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
         cab.players[dancerIndex-1] = new Player({
@@ -152,9 +158,6 @@ async function getInitialData(loc) {
         });
         console.log('--> ' + loc.name + ': Player ' + dancerIndex + ' received - ' + cab.players[dancerIndex-1].toLocaleString());
       }
-    }).catch((err) => {
-      console.error('--> Failed to get initial data. Restart the bot.')
-      throw err;
     });
   });
 }
@@ -178,7 +181,7 @@ async function retrieveData(loc) {
   for (let index = 0; index < loc.cabs.length; index++) {
     await rp(loc.cabs[index].requestDataOptions).then(($) => {
       if ($('.dancer_name').length === 0) {
-        console.error('--> ' + loc.name + ': No dancers found. Is this cookie set up correctly?');
+        console.error(`--> ${loc.name}: @cab${index+1}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`);
       } else if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
         console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
       } else {
@@ -192,7 +195,7 @@ async function retrieveData(loc) {
           ddrCode: $('.code').eq(2).text(),
           loc: loc
         });
-        console.log('--> ' + loc.name + ': Data received @cab' + (index + 1) + '\n\t> ' + loc.cabs[index].newPlayers.toLocaleString());
+        console.log(`--> ${loc.name}: Data received @cab${index}\n\t> ${loc.cabs[index].newPlayers.toLocaleString()}`);
       }
     }).catch((err) => {
       console.log(err);
@@ -511,3 +514,7 @@ if (!DISCORD_BOT_TOKEN) {
 client.login(DISCORD_BOT_TOKEN)
   .then(getAllInitialData)
   .then(updateChannelTopics);
+  .catch((err) => {
+    console.error('--> Failed to get initial data. Restart the bot.')
+    throw err;
+  });
