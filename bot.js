@@ -181,7 +181,7 @@ async function retrieveData(loc) {
   for (let index = 0; index < loc.cabs.length; index++) {
     await rp(loc.cabs[index].requestDataOptions).then(($) => {
       if ($('.dancer_name').length === 0) {
-        console.error(`--> ${loc.name}: @cab${index+1}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`);
+        console.error(`--> ${loc.name}: @cab${index}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`);
       } else if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
         console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
       } else {
