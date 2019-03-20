@@ -141,22 +141,20 @@ function getInitialData(loc) {
   console.log(`getInitialData ${loc.id}`);
   return loc.cabs.map(function(cab, index) {
     return rp(cab.requestDataOptions).then(($) => {
-      const dancerRows = $('.dancer_name').get().length; // Includes 1 header row
+      const dancerRows = $('td.dancer_name').get().length;
       if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance. We have to restart.
         throw new Error(`0 dancers found at ${loc.id} cab${index}. Restart the bot.`);
       }
 
-      const dancerCount = dancerRows - 1; // Subtract the 1 header row
-      console.log(`getInitialData ${loc.id} @cab${index} found ${dancerCount} dancers:`);
+      console.log(`getInitialData ${loc.id} @cab${index} found ${dancerRows} dancers:`);
       // Parses data
-      for (var dancerIndex = 1; dancerIndex <= Math.min(dancerCount, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
-        cab.players[dancerIndex-1] = new Player({
-          // $('.dancer_name').eq(0) is a row header, so store row 1 in players[0]
-          dancerName: $('.dancer_name').eq(dancerIndex).text(),
-          ddrCode: $('.code').eq(dancerIndex).text(),
+      for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
+        cab.players[dancerIndex] = new Player({
+          dancerName: $('td.dancer_name').eq(dancerIndex).text(),
+          ddrCode: $('td.code').eq(dancerIndex).text(),
           loc: loc
         });
-        console.log('--> ' + loc.name + ': Player ' + dancerIndex + ' received - ' + cab.players[dancerIndex-1].toLocaleString());
+        console.log('--> ' + loc.name + ': Player ' + dancerIndex + ' received - ' + cab.players[dancerIndex].toLocaleString());
       }
     });
   });
@@ -180,19 +178,19 @@ async function retrieveData(loc) {
   console.log('--> ' + loc.name + ': Retrieving data...');
   for (let index = 0; index < loc.cabs.length; index++) {
     await rp(loc.cabs[index].requestDataOptions).then(($) => {
-      if ($('.dancer_name').length === 0) {
+      if ($('td.dancer_name').length === 0) {
         console.error(`--> ${loc.name}: @cab${index}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`);
-      } else if ($('.dancer_name').eq(1).text() === '' || $('.dancer_name').eq(2).text() === '') {
+      } else if ($('td.dancer_name').eq(0).text() === '' || $('td.dancer_name').eq(1).text() === '') {
         console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
       } else {
         loc.cabs[index].newPlayers[0] = new Player({
-          dancerName: $('.dancer_name').eq(1).text(),
-          ddrCode: $('.code').eq(1).text(),
+          dancerName: $('td.dancer_name').eq(0).text(),
+          ddrCode: $('td.code').eq(0).text(),
           loc: loc
         });
         loc.cabs[index].newPlayers[1] = new Player({
-          dancerName: $('.dancer_name').eq(2).text(),
-          ddrCode: $('.code').eq(2).text(),
+          dancerName: $('td.dancer_name').eq(1).text(),
+          ddrCode: $('td.code').eq(1).text(),
           loc: loc
         });
         console.log(`--> ${loc.name}: Data received @cab${index}\n\t> ${loc.cabs[index].newPlayers.toLocaleString()}`);
