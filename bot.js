@@ -14,6 +14,7 @@ const tftiPlayers = [
   '51502133', // ORANGEEE
   '51448180', // RCKYWONG
   '51415530', // T3ALIZES
+  '51526208', // TOSHI
   '51500816', // WINBER
   '51407772', // ZEO
 ];
