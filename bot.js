@@ -9,13 +9,13 @@ const adminDiscordTags = config.get('adminDiscordTags');
 
 // Special players
 const tftiPlayers = [
+  '51504563', // DEREKH
+  '51400807', // MEGUMIN
+  '51502133', // ORANGEEE
   '51448180', // RCKYWONG
   '51415530', // T3ALIZES
-  '51400807', // MEGUMIN
-  '51504563', // DEREKH
   '51500816', // WINBER
   '51407772', // ZEO
-  '51502133', // ORANGEEE
 ];
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
