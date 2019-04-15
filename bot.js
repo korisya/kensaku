@@ -526,6 +526,7 @@ if (!DISCORD_BOT_TOKEN) {
 client.login(DISCORD_BOT_TOKEN)
   .then(getAllInitialData)
   .catch((err) => {
-    console.error('--> Failed to get initial data. Restart the bot.')
+    console.error('--> Failed to get initial data. Restart the bot.', err);
+    process.exit();
     throw err;
   });
