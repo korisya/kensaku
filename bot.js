@@ -6,6 +6,7 @@ require('http').createServer().listen(3000);
 const config = require('config');
 
 const adminDiscordTags = config.get('adminDiscordTags');
+const REFRESH_INTERVAL = config.get('refreshIntervalMs');
 
 // Special players
 const tftiPlayers = [
@@ -35,7 +36,6 @@ const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Stalking
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
 const RECENT_PLAYER_CUTOFF_MINUTES = 90;
-const REFRESH_INTERVAL = msMinute;
 function timeDifferential(nowTime, beforeTime) {
   const hr = Math.floor((nowTime - beforeTime) / msHour);
   const min = Math.floor(((nowTime - beforeTime) % msHour) / msMinute);
