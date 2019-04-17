@@ -216,11 +216,6 @@ async function retrieveData(loc) {
 // Updates player lists using new data
 function updatePlayerLists(loc) {
   loc.cabs.forEach(function(cab, index) {
-
-    // This is sort of bad and useless. It stops the bot from crashing if
-    // cab.players somehow reaches zero but also stops the cab from updating
-    // ever again. Also, it still doesn't take into account the case where
-    // cab.players.length is 1.
     if (!cab.players.length) {
       return;
     }
