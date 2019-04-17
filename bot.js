@@ -209,9 +209,6 @@ async function retrieveData(loc) {
         });
         console.log(`--> ${loc.name}: Data received @cab${index}\n\t> ${loc.cabs[index].newPlayers.toLocaleString()}`);
       }
-    }).catch((err) => {
-      console.log(err);
-      console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Failed to retrieve data. @' + loc.name + '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
     });
   }
 }
@@ -219,6 +216,11 @@ async function retrieveData(loc) {
 // Updates player lists using new data
 function updatePlayerLists(loc) {
   loc.cabs.forEach(function(cab, index) {
+
+    // This is sort of bad and useless. It stops the bot from crashing if
+    // cab.players somehow reaches zero but also stops the cab from updating
+    // ever again. Also, it still doesn't take into account the case where
+    // cab.players.length is 1.
     if (!cab.players.length) {
       return;
     }
@@ -264,7 +266,6 @@ function updatePlayerLists(loc) {
         tftiCheck(incomingPlayer, loc.id);
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
-      // how are we going to get total session times? yay now it's ez
     } // else, if the first two players are different in any way
     else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode
       && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
@@ -374,6 +375,9 @@ async function update() {
       updatePlayerLists(loc);
       updateChannelsTopicForLocation(loc);
     });
+  }).catch((err) => {
+    console.log(err);
+    console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Update aborted. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
   });
 
   setTimeout(function() {
