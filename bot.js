@@ -165,7 +165,7 @@ function getInitialData(loc) {
           ddrCode: $('td.code').eq(dancerIndex).text(),
           loc: loc
         });
-        console.log('--> ' + loc.name + ': Player ' + dancerIndex + ' received - ' + cab.players[dancerIndex].toLocaleString());
+        console.log(`--> ${loc.name} cab${index}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString());
       }
     });
   });
