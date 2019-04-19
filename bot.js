@@ -86,7 +86,7 @@ function Cab (cookieValue) {
   this.cookiejar = RequestPromise.jar();
   this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
   this.requestDataOptions = {
-    uri: 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4',
+    uri: 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4',
     jar: this.cookiejar,
   };
   this.prunedPlayers = 0;
