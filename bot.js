@@ -1,5 +1,5 @@
 var Discord = require('discord.js');
-var rp = require('request-promise');
+var RequestPromise = require('request-promise');
 var tough = require('tough-cookie');
 const cheerio = require('cheerio');
 require('http').createServer().listen(3000);
@@ -83,14 +83,12 @@ function Cab (cookieValue) {
     httpOnly: true,
     maxAge: 31536000
   });
-  this.cookiejar = rp.jar();
+  this.cookiejar = RequestPromise.jar();
   this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
   this.requestDataOptions = {
     uri: 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4',
     jar: this.cookiejar,
-    transform: function (body) {
-      return cheerio.load(body);
-    }};
+  };
   this.prunedPlayers = 0;
 }
 // Constructor for locations
@@ -151,7 +149,8 @@ function tftiCheck(incomingPlayer, locationId) {
 function getInitialData(loc) {
   console.log(`getInitialData ${loc.id}`);
   return loc.cabs.map(function(cab, index) {
-    return rp(cab.requestDataOptions).then(($) => {
+    return RequestPromise(cab.requestDataOptions).then((body) => {
+      const $ = cheerio.load(body);
       const dancerRows = $('td.dancer_name').get().length;
       if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance. We have to restart.
         throw new Error(`0 dancers found at ${loc.id} cab${index}. Restart the bot.`);
@@ -189,7 +188,8 @@ async function retrieveData(loc) {
 
   console.log('--> ' + loc.name + ': Retrieving data...');
   for (let index = 0; index < loc.cabs.length; index++) {
-    await rp(loc.cabs[index].requestDataOptions).then(($) => {
+    await RequestPromise(loc.cabs[index].requestDataOptions).then((body) => {
+      const $ = cheerio.load(body);
       if ($('td.dancer_name').length === 0) {
         const errorMessage = `--> ${loc.name}: @cab${index}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`;
         console.error(errorMessage);
