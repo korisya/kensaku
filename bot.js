@@ -472,6 +472,12 @@ client.on('message', message => {
     const cmd = message.content.substring(1).split(' ')[0];
     console.info('Command ' + cmd + ' received from ' + message.author.tag);
 
+    const isAdmin = adminDiscordTags.includes(message.author.tag);
+
+    if (isAdmin && cmd === 'yeet') {
+      return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
+    }
+
     const channel = message.channel;
     const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
 
