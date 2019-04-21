@@ -185,7 +185,7 @@ function getInitialData(loc, url) {
 
 // Retrieves new data
 // Ideally this should be done in update() instead
-function retrieveData(loc) {
+function retrieveData(loc, url) {
   // What happens if people are playing during this hour? This would run multiple times in the hour
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
@@ -200,27 +200,28 @@ function retrieveData(loc) {
   }
 
   console.log('--> ' + loc.name + ': Retrieving data...');
-  return loc.cabs.map((cab, index) => {
-    return RequestPromise(loc.cabs[index].requestDataOptions).then((body) => {
+  return loc.cabs.map((cab, cabIndex) => {
+    const requestDataOptions = url ? Object.assign({}, cab.requestDataOptions, {uri: url}) : cab.requestDataOptions;
+    return RequestPromise(requestDataOptions).then((body) => {
       const $ = cheerio.load(body);
       if ($('td.dancer_name').length === 0) {
-        const errorMessage = `--> ${loc.name}: @cab${index}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`;
+        const errorMessage = `--> ${loc.name}: @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ${loc.cabs[cabIndex].cookieValue}`;
         console.error(errorMessage);
         throw new Error(errorMessage);
       } else if ($('td.dancer_name').eq(0).text() === '' || $('td.dancer_name').eq(1).text() === '') {
         console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
       } else {
-        loc.cabs[index].newPlayers[0] = new Player({
+        loc.cabs[cabIndex].newPlayers[0] = new Player({
           dancerName: $('td.dancer_name').eq(0).text(),
           ddrCode: $('td.code').eq(0).text(),
-          loc: loc
+          loc: loc,
         });
-        loc.cabs[index].newPlayers[1] = new Player({
+        loc.cabs[cabIndex].newPlayers[1] = new Player({
           dancerName: $('td.dancer_name').eq(1).text(),
           ddrCode: $('td.code').eq(1).text(),
-          loc: loc
+          loc: loc,
         });
-        console.log(`--> ${loc.name}: Data received @cab${index}\n\t> ${loc.cabs[index].newPlayers.toLocaleString()}`);
+        console.log(`--> ${loc.name}: Data received @cab${cabIndex}\n\t> ${loc.cabs[cabIndex].newPlayers.toLocaleString()}`);
       }
     });
   });
@@ -378,18 +379,29 @@ function pruneData() {
 function update() {
   const locationPromises = ALL_LOCATIONS.map(loc => {
     const cabPromises = retrieveData(loc);
-    return Promise.all(cabPromises).then(() => {
+    return Promise.all(cabPromises)
+    .then(() => {
       pruneData();
       updatePlayerLists(loc);
       updateChannelsTopicForLocation(loc);
     })
     .catch((err) => {
-      console.log(err);
-      console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
+      if (urlBackup) {
+        console.error(`Retrying ${loc.id}`);
+        return Promise.all(retrieveData(loc, urlBackup)).catch(err => {
+          console.error('Damn we failed on the retry, too')
+        });
+      }
     });
   });
 
-  Promise.all(locationPromises).then(() => {
+  Promise.all(locationPromises)
+  .catch(err => {
+    console.log(err);
+    console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
+  })
+  .then(() => {
+    console.log('update() loop complete');
     setTimeout(update, REFRESH_INTERVAL);
   });
 }
