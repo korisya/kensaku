@@ -71,6 +71,10 @@ function Player (args) {
   };
 }
 
+// TODO: Switch when lots of errors are detected. (Don't try to switch back when stable)
+let urlPrimary = 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4';
+let urlBackup = 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
+
 // Constructor for cabs
 function Cab (cookieValue) {
   this.players = [];
@@ -86,7 +90,7 @@ function Cab (cookieValue) {
   this.cookiejar = RequestPromise.jar();
   this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
   this.requestDataOptions = {
-    uri: 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4',
+    uri: urlPrimary,
     jar: this.cookiejar,
   };
   this.prunedPlayers = 0;
@@ -146,18 +150,26 @@ function tftiCheck(incomingPlayer, locationId) {
 
 // Gets initial data
 // Ideally, we'd just retrieveData() or do whatever we do repeatedly (no special case and no duplicated code for the first run)
-function getInitialData(loc) {
+function getInitialData(loc, url) {
   console.log(`getInitialData ${loc.id}`);
-  return loc.cabs.map(function(cab, index) {
-    return RequestPromise(cab.requestDataOptions).then((body) => {
+  return loc.cabs.map((cab, cabIndex) => {
+    const requestDataOptions = url ? Object.assign({}, cab.requestDataOptions, {uri: url}) : cab.requestDataOptions;
+    return RequestPromise(requestDataOptions).then((body) => {
       const $ = cheerio.load(body);
       const dancerRows = $('td.dancer_name').get().length;
       if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance.
+      /*
+        if (!url) {
+          // Retry once with the other URL
+          console.error(`Retry ${loc.id} cab${cabIndex} ${requestDataOptions.uri} -> ${urlBackup}`);
+          return getInitialData(loc, urlBackup);
+        }
+      */
         // We have to restart.
-        throw new Error(`0 dancers found at ${loc.id} cab${index}. Restart the bot. username:` + $('#user_name .name_str').get().map(n => $(n).text()) + ' rival_list:' + $('table.tb_rival_list'));
+        throw new Error(`0 dancers found at ${loc.id} cab${cabIndex}. Restart the bot. username:` + $('#user_name .name_str').get().map(n => $(n).text()) + ' rival_list:' + $('table.tb_rival_list'));
       }
 
-      console.log(`getInitialData ${loc.id} @cab${index} found ${dancerRows} dancers:`);
+      console.log(`getInitialData ${loc.id} @cab${cabIndex} found ${dancerRows} dancers:`);
       // Parses data
       for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
         cab.players[dancerIndex] = new Player({
@@ -165,7 +177,7 @@ function getInitialData(loc) {
           ddrCode: $('td.code').eq(dancerIndex).text(),
           loc: loc
         });
-        console.log(`--> ${loc.name} cab${index}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString());
+        console.log(`--> ${loc.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString());
       }
     });
   });
@@ -173,7 +185,7 @@ function getInitialData(loc) {
 
 // Retrieves new data
 // Ideally this should be done in update() instead
-async function retrieveData(loc) {
+function retrieveData(loc) {
   // What happens if people are playing during this hour? This would run multiple times in the hour
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
@@ -188,8 +200,8 @@ async function retrieveData(loc) {
   }
 
   console.log('--> ' + loc.name + ': Retrieving data...');
-  for (let index = 0; index < loc.cabs.length; index++) {
-    await RequestPromise(loc.cabs[index].requestDataOptions).then((body) => {
+  return loc.cabs.map((cab, index) => {
+    return RequestPromise(loc.cabs[index].requestDataOptions).then((body) => {
       const $ = cheerio.load(body);
       if ($('td.dancer_name').length === 0) {
         const errorMessage = `--> ${loc.name}: @cab${index}: No dancers found. Is this cookie set up correctly? ${loc.cabs[index].cookieValue}`;
@@ -211,7 +223,7 @@ async function retrieveData(loc) {
         console.log(`--> ${loc.name}: Data received @cab${index}\n\t> ${loc.cabs[index].newPlayers.toLocaleString()}`);
       }
     });
-  }
+  });
 }
 
 // Updates player lists using new data
@@ -363,22 +375,23 @@ function pruneData() {
   });
 }
 
-async function update() {
-  const promises = ALL_LOCATIONS.map(loc => retrieveData(loc));
-  Promise.all(promises).then(() => {
-    pruneData();
-    ALL_LOCATIONS.forEach((loc) => {
+function update() {
+  const locationPromises = ALL_LOCATIONS.map(loc => {
+    const cabPromises = retrieveData(loc);
+    return Promise.all(cabPromises).then(() => {
+      pruneData();
       updatePlayerLists(loc);
       updateChannelsTopicForLocation(loc);
+    })
+    .catch((err) => {
+      console.log(err);
+      console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
     });
-  }).catch((err) => {
-    console.log(err);
-    console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Update aborted. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
   });
 
-  setTimeout(function() {
-    update();
-  }, REFRESH_INTERVAL);
+  Promise.all(locationPromises).then(() => {
+    setTimeout(update, REFRESH_INTERVAL);
+  });
 }
 
 // Initialize Discord Bot
@@ -526,16 +539,23 @@ const ALL_LOCATIONS = CONFIG_LOCATIONS.map((shop) => {
 
 function getAllInitialData() {
   console.log('getAllInitialData');
-  setTimeout(function() {
-    update();
-  }, REFRESH_INTERVAL);
 
   const promises = ALL_LOCATIONS.map(loc => {
-    return Promise.all(getInitialData(loc)).then(() => {
+    return Promise.all(getInitialData(loc)).catch(err => {
+      if (urlBackup) {
+        console.error('retrying', loc.id, urlBackup);
+        return getInitialData(loc, urlBackup);
+      }
+    }).then(() => {
       updateChannelsTopicForLocation(loc);
     });
   });
-  return Promise.all(promises);
+  return Promise.all(promises)
+  // We would use .finally() if it existed, but .then() is fine since we'll exit on an error anyways.
+  .then(() => {
+    console.log('getAllInitialData complete, starting update loop');
+    setTimeout(update, REFRESH_INTERVAL);
+  });
 }
 
 const DISCORD_BOT_TOKEN = config.get('discordBotToken');
