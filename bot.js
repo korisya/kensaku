@@ -154,7 +154,7 @@ function getInitialData(loc) {
       const dancerRows = $('td.dancer_name').get().length;
       if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance.
         // We have to restart.
-        throw new Error(`0 dancers found at ${loc.id} cab${index}. Restart the bot. username:` + $('#user_name') + 'rival_list:' + $('table.tb_rival_list'));
+        throw new Error(`0 dancers found at ${loc.id} cab${index}. Restart the bot. username:` + $('#user_name .name_str').get().map(n => $(n).text()) + ' rival_list:' + $('table.tb_rival_list'));
       }
 
       console.log(`getInitialData ${loc.id} @cab${index} found ${dancerRows} dancers:`);
