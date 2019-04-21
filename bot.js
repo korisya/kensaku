@@ -486,17 +486,17 @@ client.on('message', message => {
       return;
     }
 
-    if (cmd === 'whose') {
-      channel.send('Check the channel topic. Use `!here` if you really need it saved in message history.');
-    } else if (cmd === 'here') {
-      const recentPlayers = shop.getRecentPlayers();
-      const response = "Check the channel topic.\n\n" + summaryHereString(shop) + monospace(recentPlayers.join('\n'));
-      console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
-      channel.send(response);
-    } else if (adminDiscordTags.includes(message.author.tag)) {
+    if (isAdmin) {
       if (cmd === 'all') {
         reportTodaysPlayersForChannel(channel, shop);
+      } else if (cmd === 'here') {
+        const recentPlayers = shop.getRecentPlayers();
+        const response = summaryHereString(shop) + monospace(recentPlayers.join('\n'));
+        console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
+        channel.send(response);
       }
+    } else if (cmd === 'whose' || cmd === 'here') {
+      channel.send('Check the channel topic.');
     }
   }
 });
