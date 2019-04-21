@@ -420,7 +420,7 @@ function reportTodaysPlayersForChannel(channel, loc) {
   channel.send(message);
 }
 
-function summaryHereString(loc) {
+function recentPlayersNamesTimes(loc) {
   const currentTime = new Date();
   const nowString = timeString(currentTime, loc.timeZone);
 
@@ -435,6 +435,15 @@ function summaryHereString(loc) {
     }
   });
 
+  return playerNamesTimes;
+};
+
+function summaryHereString(loc, { includeList = true } = {}) {
+  const currentTime = new Date();
+  const nowString = timeString(currentTime, loc.timeZone);
+  const playerNamesTimes = recentPlayersNamesTimes(loc);
+  const numPlayers = playerNamesTimes.length;
+
   let summaryHereString;
   if (loc.todaysPlayers.length === 0) {
     summaryHereString = `${nowString}: 0 players today.`;
@@ -444,7 +453,10 @@ function summaryHereString(loc) {
     summaryHereString = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
   } else {
     const s = (numPlayers === 1) ? '' : 's';
-    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji} (${playerNamesTimes.join(', ')})`;
+    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji}`;
+    if (includeList) {
+      summaryHereString += ` (${playerNamesTimes.join(", ")})`;
+    }
   }
 
   return summaryHereString;
@@ -491,7 +503,7 @@ client.on('message', message => {
         reportTodaysPlayersForChannel(channel, shop);
       } else if (cmd === 'here') {
         const recentPlayers = shop.getRecentPlayers();
-        const response = summaryHereString(shop) + monospace(recentPlayers.join('\n'));
+        const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
         console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
         channel.send(response);
       }
