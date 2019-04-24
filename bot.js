@@ -72,8 +72,8 @@ function Player (args) {
 }
 
 // TODO: Switch when lots of errors are detected. (Don't try to switch back when stable)
-let urlPrimary = 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4';
-let urlBackup = 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
+let urlPrimary = 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
+let urlBackup = 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4';
 
 // Constructor for cabs
 function Cab (cookieValue) {
