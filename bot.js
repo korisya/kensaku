@@ -387,9 +387,17 @@ function update() {
     })
     .catch((err) => {
       if (urlBackup) {
-        console.error(`Retrying ${loc.id}`);
-        return Promise.all(retrieveData(loc, urlBackup)).catch(err => {
-          console.error('Damn we failed on the retry, too')
+        console.error(`Retrying ${loc.id} with URL ${urlBackup}`);
+        return Promise.all(retrieveData(loc, urlBackup))
+        .then(() => {
+          pruneData();
+          updatePlayerLists(loc);
+          updateChannelsTopicForLocation(loc);
+        })
+        .catch(err => {
+          const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+          console.error(errorMessage);
+          throw new Error(errorMessage);
         });
       }
     });
@@ -553,12 +561,22 @@ function getAllInitialData() {
   console.log('getAllInitialData');
 
   const promises = ALL_LOCATIONS.map(loc => {
-    return Promise.all(getInitialData(loc)).catch(err => {
+    return Promise.all(getInitialData(loc))
+    .catch(err => {
       if (urlBackup) {
         console.error('retrying', loc.id, urlBackup);
-        return getInitialData(loc, urlBackup);
+        return Promise.all(getInitialData(loc, urlBackup))
+        .then(() => {
+          updateChannelsTopicForLocation(loc);
+        })
+        .catch(err => {
+          const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+          console.error(errorMessage);
+          throw new Error(errorMessage);
+        });
       }
-    }).then(() => {
+    })
+    .then(() => {
       updateChannelsTopicForLocation(loc);
     });
   });
