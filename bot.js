@@ -449,7 +449,7 @@ function reportTodaysPlayersForChannel(channel, loc) {
   const todaysPlayers = loc.getTodaysPlayers();
   const s = todaysPlayers.length === 1 ? '' : 's';
   const message = `${todaysPlayers.length} player${s} today:` + monospace(todaysPlayers.join('\n'));
-  console.info('Sending message to ' + channel.name + ': ' + message);
+  console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
   channel.send(message);
 }
 
