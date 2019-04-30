@@ -271,7 +271,7 @@ function updatePlayerLists(loc) {
       } else {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        pingChannel(loc.id, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+        pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
         tftiCheck(incomingPlayer, loc.id);
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
@@ -345,7 +345,7 @@ function updatePlayerLists(loc) {
       }
 
       if (str !== '') {
-        pingChannel(loc.id, monospace(str));
+        pingChannelsForLocation(loc, monospace(str));
       }
     }
   });
@@ -433,14 +433,20 @@ function monospace(message) {
   return '```' + (message || ' ') + '```';
 }
 
-function pingChannel(channelName, message) {
-  console.info('pingChannel ' + channelName + ': ' + message);
-  return getChannelsWithName(channelName).map((channel) => {
-    console.info(`Sending message to ${channel.guild.name}/#${channelName}: ${message}`);
-    channel.send(message);
-  });
+function pingChannel(channel, message) {
+  console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
+  channel.send(message);
 }
 
+function pingChannelsForLocation(loc, message) {
+  console.info('pingChannel ' + loc.id + ': ' + message);
+  const channels = getChannelsWithName(loc.id);
+  if (!channels.size) {
+    console.error('Could not find channels for location ' + loc.id);
+  } else {
+    channels.forEach((channel) => pingChannel(channel, message));
+  }
+}
 function reportTodaysPlayers(loc) {
   getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc));
 }
