@@ -2,7 +2,6 @@ const Discord = require('discord.js');
 const RequestPromise = require('request-promise');
 const tough = require('tough-cookie');
 const cheerio = require('cheerio');
-require('http').createServer().listen(3000);
 const config = require('config');
 
 const adminDiscordTags = config.get('adminDiscordTags');
