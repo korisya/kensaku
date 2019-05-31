@@ -556,7 +556,7 @@ function getAllInitialData() {
           updateChannelsTopicForLocation(loc);
         })
         .catch(err => {
-          const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+          const errorMessage = `Damn we failed on the retry, too. ${loc.id} ${urlBackup}`;
           console.error(errorMessage);
           throw new Error(errorMessage);
         });
