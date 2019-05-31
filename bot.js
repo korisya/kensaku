@@ -527,7 +527,7 @@ client.on('message', message => {
         channel.send(response);
       }
     } else if (cmd === 'whose' || cmd === 'here') {
-      channel.send('Check the channel topic.');
+      channel.send('Check the channel topic. (on mobile, swipe left from the right edge of your screen)');
     }
   }
 });
