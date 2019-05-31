@@ -8,26 +8,7 @@ const adminDiscordTags = config.get('adminDiscordTags');
 const REFRESH_INTERVAL = config.get('refreshIntervalMs');
 
 // Special players
-const tftiPlayers = [
-  '51446739', // BRYAN
-  '51423669', // CAFFWIN
-  '51466912', // CORRIN
-  '51504563', // DEREKH
-  '51533542', // HANABEEE
-  '51422272', // KITARUTC
-  '51400807', // MEGUMIN
-  '51409995', // NRM
-  '51502133', // ORANGEEE
-  '51500817', // RICHARD
-  '51448180', // RCKYWONG
-  '51504035', // SONIC
-  '51489149', // STRETCH
-  '51415530', // T3ALIZES
-  '51526208', // TOSHI
-  '51500816', // WINBER
-  '51451675', // WOW
-  '51407772', // ZEO
-];
+const tftiPlayers = config.get('tftiPlayers');
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
 const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Stalking
