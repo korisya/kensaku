@@ -82,33 +82,33 @@ function Location (loc) {
   this.cabs = loc.cabs;
   this.timeZone = loc.timeZone;
   this.todaysPlayers = [];
+}
 
-  this.getRecentPlayers = function () {
-    const currentTime = new Date();
-    const playerStrings = [];
-    // TODO: Use a reduce function
-    this.todaysPlayers.forEach(function(player) {
-      const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-      if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
-        const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
-        playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
-      }
-    });
-    return playerStrings;
-  };
+function getRecentPlayers(shop) {
+  const currentTime = new Date();
+  const playerStrings = [];
+  // TODO: Use a reduce function
+  shop.todaysPlayers.forEach(function(player) {
+    const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
+    if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
+      const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
+      playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
+    }
+  });
+  return playerStrings;
+};
 
-  this.getTodaysPlayers = function () {
-    const currentTime = new Date();
-    const playerStrings = [];
-    // TODO: Use a reduce function
-    this.todaysPlayers.forEach(function(player) {
-      const firstTime = timeString(player.firstTime, player.loc.timeZone);
-      const lastTime = timeString(player.lastTime, player.loc.timeZone);
-      const timePlayed = timeDifferential(player.lastTime, player.firstTime);
-      playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
-    });
-    return playerStrings;
-  };
+function getTodaysPlayers(shop) {
+  const currentTime = new Date();
+  const playerStrings = [];
+  // TODO: Use a reduce function
+  shop.todaysPlayers.forEach(function(player) {
+    const firstTime = timeString(player.firstTime, player.loc.timeZone);
+    const lastTime = timeString(player.lastTime, player.loc.timeZone);
+    const timePlayed = timeDifferential(player.lastTime, player.firstTime);
+    playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+  });
+  return playerStrings;
 }
 
 function tftiCheck(incomingPlayer, locationId) {
@@ -432,7 +432,7 @@ function reportTodaysPlayers(loc) {
 }
 
 function reportTodaysPlayersForChannel(channel, loc) {
-  const todaysPlayers = loc.getTodaysPlayers();
+  const todaysPlayers = getTodaysPlayers(loc);
   const s = todaysPlayers.length === 1 ? '' : 's';
   const message = `${todaysPlayers.length} player${s} today:` + monospace(todaysPlayers.join('\n'));
   console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
@@ -521,7 +521,7 @@ client.on('message', message => {
       if (cmd === 'all') {
         reportTodaysPlayersForChannel(channel, shop);
       } else if (cmd === 'here') {
-        const recentPlayers = shop.getRecentPlayers();
+        const recentPlayers = getRecentPlayers(shop);
         const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
         console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
         channel.send(response);
