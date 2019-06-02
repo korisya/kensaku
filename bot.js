@@ -526,7 +526,8 @@ client.on('error', console.error);
 
 client.on('message', message => {
   if (message.content.substring(0, 1) == '!') {
-    const cmd = message.content.substring(1).split(' ')[0];
+    const args = message.content.split(' ');
+    const cmd = args[0].substring(1);
     console.info('Command ' + cmd + ' received from ' + message.author.tag);
 
     const isAdmin = adminDiscordTags.includes(message.author.tag);
@@ -551,6 +552,26 @@ client.on('message', message => {
         const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
         console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
         channel.send(response);
+      } else if (cmd === 'addcab') {
+        const cookieValue = args[1];
+        const cab = new Cab(cookieValue);
+        const cabIndex = shop.cabs.length;
+        shop.cabs.push(cab);
+        getInitialDataForCab({
+          cab,
+          cabIndex,
+          shop,
+        }).then(() => {
+          channel.send('Added');
+        }).catch((err) => {
+          console.error('Failed to add cab', err);
+        });
+      } else if (cmd === 'removecab') {
+        const cabIndex = args[1];
+        console.log('before remove', shop.cabs.map(cab => cab.cookieValue));
+        shop.cabs.splice(cabIndex, 1);
+        console.log('after remove', shop.cabs.map(cab => cab.cookieValue));
+        channel.send('Removed');
       }
     } else if (cmd === 'whose' || cmd === 'here') {
       channel.send('Check the channel topic. (on mobile, swipe left from the right edge of your screen)');
