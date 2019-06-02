@@ -51,9 +51,26 @@ function Player (args) {
   };
 }
 
-// TODO: Switch when lots of errors are detected. (Don't try to switch back when stable)
-let urlPrimary = 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
-let urlBackup = 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4';
+function isDailyMaintenanceTime() {
+  const now = new Date();
+  const japanHour = (now.getUTCHours() + 9) % 24;
+  return japanHour === 5 || japanHour === 6;
+}
+
+function isExtendedMaintenanceTime() {
+  return false;
+}
+
+// Determine which URL to hit
+function getUrl() {
+  if (isDailyMaintenanceTime()) {
+    // For some reason, on US accounts, this URL works during daily maintenance
+    return 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4';
+  } else {
+    // This page is faster and more reliable, but goes down during daily maintenance
+    return 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
+  }
+}
 
 // Constructor for cabs
 function Cab (cookieValue) {
@@ -69,10 +86,6 @@ function Cab (cookieValue) {
   });
   this.cookiejar = RequestPromise.jar();
   this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
-  this.requestDataOptions = {
-    uri: urlPrimary,
-    jar: this.cookiejar,
-  };
   this.prunedPlayers = 0;
 }
 // Constructor for locations
@@ -130,42 +143,45 @@ function tftiCheck(incomingPlayer, locationId) {
 
 // Gets initial data
 // Ideally, we'd just retrieveData() or do whatever we do repeatedly (no special case and no duplicated code for the first run)
-function getInitialData(loc, url) {
-  console.log(`getInitialData ${loc.id}`);
-  return loc.cabs.map((cab, cabIndex) => {
-    const requestDataOptions = url ? Object.assign({}, cab.requestDataOptions, {uri: url}) : cab.requestDataOptions;
-    return RequestPromise(requestDataOptions).then((body) => {
-      const $ = cheerio.load(body);
-      const dancerRows = $('td.dancer_name').get().length;
-      if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance.
-      /*
-        if (!url) {
-          // Retry once with the other URL
-          console.error(`Retry ${loc.id} cab${cabIndex} ${requestDataOptions.uri} -> ${urlBackup}`);
-          return getInitialData(loc, urlBackup);
-        }
-      */
-        // We have to restart.
-        throw new Error(`0 dancers found at ${loc.id} cab${cabIndex}. Restart the bot. username:` + $('#user_name .name_str').get().map(n => $(n).text()) + ' rival_list:' + $('table.tb_rival_list'));
-      }
-
-      console.log(`getInitialData ${loc.id} @cab${cabIndex} found ${dancerRows} dancers:`);
-      // Parses data
-      for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
-        cab.players[dancerIndex] = new Player({
-          dancerName: $('td.dancer_name').eq(dancerIndex).text(),
-          ddrCode: $('td.code').eq(dancerIndex).text(),
-          loc: loc
-        });
-        console.log(`--> ${loc.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString());
-      }
+function getInitialData(shop) {
+  console.log(`getInitialData ${shop.id}`);
+  return shop.cabs.map((cab, cabIndex) => {
+    return getInitialDataForCab({
+      cab,
+      cabIndex,
+      shop,
     });
+  });
+}
+
+function getInitialDataForCab({cab, cabIndex, shop}) {
+  return RequestPromise({jar: cab.cookiejar, uri: getUrl()})
+  .then((body) => {
+    const $ = cheerio.load(body);
+    const dancerRows = $('td.dancer_name').get().length;
+    if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance.
+      // We have to restart.
+      const error = `0 dancers found at ${shop.id} cab${cabIndex}. Restart the bot. username:` + $('#user_name .name_str').get().map(n => $(n).text()) + ' rival_list:' + $('table.tb_rival_list');
+      console.error(error);
+      throw new Error(error);
+    }
+
+    console.log(`getInitialData ${shop.id} @cab${cabIndex} found ${dancerRows} dancers:`);
+    // Parses data
+    for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
+      cab.players[dancerIndex] = new Player({
+        dancerName: $('td.dancer_name').eq(dancerIndex).text(),
+        ddrCode: $('td.code').eq(dancerIndex).text(),
+        loc: shop,
+      });
+      console.log(`--> ${shop.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString());
+    }
   });
 }
 
 // Retrieves new data
 // Ideally this should be done in update() instead
-function retrieveData(loc, url) {
+function retrieveData(loc) {
   // What happens if people are playing during this hour? This would run multiple times in the hour
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
@@ -180,27 +196,24 @@ function retrieveData(loc, url) {
 
   console.log('--> ' + loc.name + ': Retrieving data...');
   return loc.cabs.map((cab, cabIndex) => {
-    const requestDataOptions = url ? Object.assign({}, cab.requestDataOptions, {uri: url}) : cab.requestDataOptions;
-    return RequestPromise(requestDataOptions).then((body) => {
+    return RequestPromise({jar: cab.cookiejar, uri: getUrl()}).then((body) => {
       const $ = cheerio.load(body);
-      if ($('td.dancer_name').length === 0) {
+      const dancerCount = $('td.dancer_name').length;
+      if (dancerCount === 0) {
         const errorMessage = `--> ${loc.name}: @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ${loc.cabs[cabIndex].cookieValue}`;
         console.error(errorMessage);
         throw new Error(errorMessage);
       } else if ($('td.dancer_name').eq(0).text() === '' || $('td.dancer_name').eq(1).text() === '') {
         console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
       } else {
-        loc.cabs[cabIndex].newPlayers[0] = new Player({
-          dancerName: $('td.dancer_name').eq(0).text(),
-          ddrCode: $('td.code').eq(0).text(),
-          loc: loc,
-        });
-        loc.cabs[cabIndex].newPlayers[1] = new Player({
-          dancerName: $('td.dancer_name').eq(1).text(),
-          ddrCode: $('td.code').eq(1).text(),
-          loc: loc,
-        });
-        console.log(`--> ${loc.name}: Data received @cab${cabIndex}\n\t> ${loc.cabs[cabIndex].newPlayers.toLocaleString()}`);
+        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) { // Get up to 2 dancers
+          loc.cabs[cabIndex].newPlayers[dancerIndex] = new Player({
+            dancerName: $('td.dancer_name').eq(dancerIndex).text(),
+            ddrCode: $('td.code').eq(dancerIndex).text(),
+            loc,
+          });
+        }
+        console.log(`--> ${loc.name}: Data received @cab${cabIndex} >` + loc.cabs[cabIndex].newPlayers.toLocaleString());
       }
     });
   });
@@ -365,20 +378,18 @@ function update() {
       updateChannelsTopicForLocation(loc);
     })
     .catch((err) => {
-      if (urlBackup) {
-        console.error(`Retrying ${loc.id} with URL ${urlBackup}`);
-        return Promise.all(retrieveData(loc, urlBackup))
-        .then(() => {
-          pruneData();
-          updatePlayerLists(loc);
-          updateChannelsTopicForLocation(loc);
-        })
-        .catch(err => {
-          const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
-          console.error(errorMessage);
-          throw new Error(errorMessage);
-        });
-      }
+      console.error(err, `${getUrl()} failed, retrying ${loc.id} with URL ${getUrl()}`);
+      return Promise.all(retrieveData(loc))
+      .then(() => {
+        pruneData();
+        updatePlayerLists(loc);
+        updateChannelsTopicForLocation(loc);
+      })
+      .catch(err => {
+        const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+        console.error(errorMessage);
+        throw new Error(errorMessage);
+      });
     });
   });
 
@@ -548,18 +559,16 @@ function getAllInitialData() {
   const promises = ALL_LOCATIONS.map(loc => {
     return Promise.all(getInitialData(loc))
     .catch(err => {
-      if (urlBackup) {
-        console.error('retrying', loc.id, urlBackup);
-        return Promise.all(getInitialData(loc, urlBackup))
-        .then(() => {
-          updateChannelsTopicForLocation(loc);
-        })
-        .catch(err => {
-          const errorMessage = `Damn we failed on the retry, too. ${loc.id} ${urlBackup}`;
-          console.error(errorMessage);
-          throw new Error(errorMessage);
-        });
-      }
+      console.error(getUrl(), 'failed,', err, 'retrying', loc.id, getUrl());
+      return Promise.all(getInitialData(loc))
+      .then(() => {
+        updateChannelsTopicForLocation(loc);
+      })
+      .catch(err => {
+        const errorMessage = `Damn we failed on the retry, too. ${loc.id}`;
+        console.error(errorMessage);
+        throw new Error(errorMessage);
+      });
     })
     .then(() => {
       updateChannelsTopicForLocation(loc);
