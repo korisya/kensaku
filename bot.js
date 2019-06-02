@@ -170,10 +170,9 @@ function retrieveData(loc, url) {
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
   var now = new Date();
-  const clientHoursBehindUtc = now.getTimezoneOffset() / 60; // This could be static at boot time, but runtime would support changing time zones during runtime
   const isAmerica = loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1;
-  const usShouldReport = isAmerica && (now.getHours() + clientHoursBehindUtc) === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 4am at the location's local time. Not important.
-  const jpShouldReport = !isAmerica && (now.getHours() + clientHoursBehindUtc) === 20; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
+  const usShouldReport = isAmerica && now.getUTCHours() === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 2am at the location's local time. Not important.
+  const jpShouldReport = !isAmerica && now.getUTCHours() === 20; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
   if (loc.todaysPlayers.length !== 0 && (usShouldReport || jpShouldReport)) {
     reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
