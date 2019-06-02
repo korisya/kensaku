@@ -221,7 +221,7 @@ function retrieveData(loc) {
 
 // Updates player lists using new data
 function updatePlayerLists(loc) {
-  loc.cabs.forEach(function(cab, index) {
+  loc.cabs.forEach(function(cab, cabIndex) {
     if (!cab.players.length) {
       return;
     }
@@ -235,7 +235,7 @@ function updatePlayerLists(loc) {
       var foundPlayer = cab.players.find(function(player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
-      console.log(`--> ${loc.name}: cab${index}.players before: ` + cab.players.toLocaleString());
+      console.log(`--> ${loc.name}: cab${cabIndex}.players before: ` + cab.players.toLocaleString());
       // if duplicate, remove and unshift. else unshift and pop
       if (foundPlayer) {
         cab.players.splice(cab.players.indexOf(foundPlayer), 1);
@@ -248,7 +248,7 @@ function updatePlayerLists(loc) {
           cab.players.pop();
         }
       }
-      console.log(`--> ${loc.name}: cab${index}.players after: ` + cab.players.toLocaleString());
+      console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
       // find out if the player is on today's list
       var foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
@@ -281,7 +281,7 @@ function updatePlayerLists(loc) {
         return player.ddrCode === incomingPlayer1.ddrCode;
       });
 
-      console.log('--> ' + loc.name + ': cab.players before: ' + cab.players.toLocaleString());
+      console.log(`--> ${loc.name}: cab${cabIndex}.players before: ` + cab.players.toLocaleString());
       if (foundPlayer1) {
         cab.players.splice(cab.players.indexOf(foundPlayer1), 1);
         cab.players.unshift(incomingPlayer1);
@@ -304,7 +304,7 @@ function updatePlayerLists(loc) {
           cab.players.pop();
         }
       }
-      console.log('--> ' + loc.name + ': cab.players after: ' + cab.players.toLocaleString());
+      console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
       var foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
         return player.ddrCode === incomingPlayer0.ddrCode;
