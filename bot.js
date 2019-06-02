@@ -441,12 +441,28 @@ function reportTodaysPlayers(loc) {
   getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc));
 }
 
+// https://medium.com/@Dragonza/four-ways-to-chunk-an-array-e19c889eac4
+function chunk(array, size) {
+  const chunked_arr = [];
+  let index = 0;
+  while (index < array.length) {
+    chunked_arr.push(array.slice(index, size + index));
+    index += size;
+  }
+  return chunked_arr;
+}
+
 function reportTodaysPlayersForChannel(channel, loc) {
   const todaysPlayers = getTodaysPlayers(loc);
   const s = todaysPlayers.length === 1 ? '' : 's';
-  const message = `${todaysPlayers.length} player${s} today:` + monospace(todaysPlayers.join('\n'));
-  console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
-  channel.send(message);
+  let message = `${todaysPlayers.length} player${s} today:`; // TODO: replace with YYYY-MM-DD
+  // Instead of trying to compute the perfect string length <= 2000, just safely/simply cut off at 48 players per message.
+  chunk(todaysPlayers, 48).forEach(chunkOf48Players => {
+    message += monospace(chunkOf48Players.join('\n'));
+    console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
+    channel.send(message);
+    message = '';
+  });
 }
 
 function recentPlayersNamesTimes(loc) {
