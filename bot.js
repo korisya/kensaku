@@ -200,20 +200,26 @@ function retrieveData(loc) {
       const $ = cheerio.load(body);
       const dancerCount = $('td.dancer_name').length;
       if (dancerCount === 0) {
-        const errorMessage = `--> ${loc.name}: @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ${loc.cabs[cabIndex].cookieValue}`;
+        const errorMessage = `--> ${loc.name} @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ` + loc.cabs[cabIndex].cookieValue;
         console.error(errorMessage);
         throw new Error(errorMessage);
       } else if ($('td.dancer_name').eq(0).text() === '' || $('td.dancer_name').eq(1).text() === '') {
-        console.error('--> ' + loc.name + ': Ghosts appeared. Spooky af :monkaPrim:');
+        console.error(`--> ${loc.name} @cab${cabIndex}: Ghosts appeared. Spooky af :monkaPrim:`);
       } else {
-        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) { // Get up to 2 dancers
-          loc.cabs[cabIndex].newPlayers[dancerIndex] = new Player({
+        const receivedPlayers = [];
+        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) { // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
+          receivedPlayers[dancerIndex] = new Player({
             dancerName: $('td.dancer_name').eq(dancerIndex).text(),
             ddrCode: $('td.code').eq(dancerIndex).text(),
             loc,
           });
         }
-        console.log(`--> ${loc.name}: Data received @cab${cabIndex} >` + loc.cabs[cabIndex].newPlayers.toLocaleString());
+        console.log(`--> ${loc.name} @cab${cabIndex}: Data received >` + receivedPlayers.toLocaleString());
+
+        // Until we fix some logic, only put top 2 into loc.cabs.newPlayers
+        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) {
+          loc.cabs[cabIndex].newPlayers[dancerIndex] = receivedPlayers[dancerIndex];
+        }
       }
     });
   });
