@@ -511,7 +511,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
   if (loc.todaysPlayers.length === 0) {
     summaryHereString = `${nowString}: 0 players today.`;
   } else if (numPlayers === 0) {
-    // TODO: What if a hiddenPlayer is here?
+    // TODO: If a hiddenPlayer is here, we'll still report them. Since this is pretty rare, just don't solve for this for now.
     const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
     summaryHereString = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
