@@ -6,9 +6,10 @@
     "rw#0628"
   ],
   "tftiPlayers": [],
+  "hiddenPlayers": [],
   "shops": [
     {
-      "id": "round1-sanjose",
+      "id": "san-jose-r1-esc",
       "timeZone": "America/Los_Angeles",
       "cookies": [
         "fillllll-meee-innn-with-cookievaluee",

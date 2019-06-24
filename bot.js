@@ -9,6 +9,10 @@ const REFRESH_INTERVAL = config.get('refreshIntervalMs');
 
 // Special players
 const tftiPlayers = config.get('tftiPlayers');
+
+// Hidden players
+const hiddenPlayers = config.get('hiddenPlayers');
+
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
 const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Stalking
@@ -103,7 +107,7 @@ function getRecentPlayers(shop) {
   // TODO: Use a reduce function
   shop.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-    if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
+    if (!hiddenPlayers.includes(player.ddrCode) && timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
       playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
     }
@@ -119,7 +123,9 @@ function getTodaysPlayers(shop) {
     const firstTime = timeString(player.firstTime, player.loc.timeZone);
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
-    playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+    if (!hiddenPlayers.includes(player.ddrCode)) {
+      playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+    }
   });
   return playerStrings;
 }
@@ -269,7 +275,9 @@ function updatePlayerLists(loc) {
       } else {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+        if (!hiddenPlayers.includes(incomingPlayer.ddrCode)) {
+          pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+        }
         tftiCheck(incomingPlayer, loc.id);
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
@@ -326,7 +334,9 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.unshift(incomingPlayer1);
       } else {
         loc.todaysPlayers.unshift(incomingPlayer1);
-        str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
+        if (!hiddenPlayers.includes(incomingPlayer1.ddrCode)) {
+          str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
+        }
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
         tftiCheck(incomingPlayer1, loc.id);
       }
@@ -337,7 +347,9 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.unshift(incomingPlayer0);
       } else {
         loc.todaysPlayers.unshift(incomingPlayer0);
-        str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
+        if (!hiddenPlayers.includes(incomingPlayer0.ddrCode)) {
+          str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
+        }
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer0.toLocaleString());
         tftiCheck(incomingPlayer0, loc.id);
       }
@@ -480,7 +492,7 @@ function recentPlayersNamesTimes(loc) {
 
   loc.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-    if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
+    if (!hiddenPlayers.includes(player.ddrCode) && timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       numPlayers++;
       playerNamesTimes.push(`${player.name} ${timeSinceSeen.minOnly}m`);
     }
@@ -499,6 +511,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
   if (loc.todaysPlayers.length === 0) {
     summaryHereString = `${nowString}: 0 players today.`;
   } else if (numPlayers === 0) {
+    // TODO: If a hiddenPlayer is here, we'll still report them. Since this is pretty rare, just don't solve for this for now.
     const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
     summaryHereString = `${nowString}: ${players} left! :eyes: Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
