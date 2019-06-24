@@ -123,8 +123,9 @@ function getTodaysPlayers(shop) {
     const firstTime = timeString(player.firstTime, player.loc.timeZone);
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
-    if (!hiddenPlayers.includes(player.ddrCode))
-        playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+    if (!hiddenPlayers.includes(player.ddrCode)) {
+      playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+    }
   });
   return playerStrings;
 }
@@ -274,8 +275,9 @@ function updatePlayerLists(loc) {
       } else {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        if (!hiddenPlayers.includes(incomingPlayer.ddrCode))
+        if (!hiddenPlayers.includes(incomingPlayer.ddrCode)) {
           pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+        }
         tftiCheck(incomingPlayer, loc.id);
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
       }
@@ -332,8 +334,9 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.unshift(incomingPlayer1);
       } else {
         loc.todaysPlayers.unshift(incomingPlayer1);
-        if (!hiddenPlayers.includes(incomingPlayer1.ddrCode))
+        if (!hiddenPlayers.includes(incomingPlayer1.ddrCode)) {
           str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
+        }
         console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
         tftiCheck(incomingPlayer1, loc.id);
       }
