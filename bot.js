@@ -147,6 +147,33 @@ function tftiCheck(incomingPlayer, locationId) {
   }
 }
 
+function reportNewPlayer(loc, incomingPlayer) {
+  if (!hiddenPlayers.includes(incomingPlayer.ddrCode)) {
+    pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+  }
+  tftiCheck(incomingPlayer, loc.id);
+  console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
+};
+
+function reportNewPlayers(loc, players) {
+  let combinedMessage = '';
+  players.forEach(player => {
+    if (hiddenPlayers.includes(player.ddrCode)) {
+      console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
+    } else {
+      if (combinedMessage) {
+        combinedMessage += '\n';
+      }
+      combinedMessage += `+ ${player.name}    ${player.ddrCode}`;
+    }
+    console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
+    tftiCheck(player, loc.id);
+  });
+  if (combinedMessage) {
+    pingChannelsForLocation(loc, monospace(combinedMessage));
+  }
+};
+
 // Gets initial data
 // Ideally, we'd just retrieveData() or do whatever we do repeatedly (no special case and no duplicated code for the first run)
 function getInitialData(shop) {
@@ -278,11 +305,7 @@ function updatePlayerLists(loc) {
       } else {
         // New player
         loc.todaysPlayers.unshift(incomingPlayer);
-        if (!hiddenPlayers.includes(incomingPlayer.ddrCode)) {
-          pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
-        }
-        tftiCheck(incomingPlayer, loc.id);
-        console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
+        reportNewPlayer(loc, incomingPlayer);
       }
     } // else, if the first two players are different in any way
     else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode
@@ -330,18 +353,14 @@ function updatePlayerLists(loc) {
         return player.ddrCode === incomingPlayer1.ddrCode;
       });
 
-      var str = '';
+      const playersToReport = [];
       if (foundTodaysPlayer1) {
         incomingPlayer1.firstTime = foundTodaysPlayer1.firstTime;
         loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer1), 1);
         loc.todaysPlayers.unshift(incomingPlayer1);
       } else {
         loc.todaysPlayers.unshift(incomingPlayer1);
-        if (!hiddenPlayers.includes(incomingPlayer1.ddrCode)) {
-          str += '+ ' + incomingPlayer1.name + '    ' + incomingPlayer1.ddrCode;
-        }
-        console.log('\t> @' + loc.name + ': + ' + incomingPlayer1.toLocaleString());
-        tftiCheck(incomingPlayer1, loc.id);
+        playersToReport.push(incomingPlayer1);
       }
 
       if (foundTodaysPlayer0) {
@@ -350,16 +369,10 @@ function updatePlayerLists(loc) {
         loc.todaysPlayers.unshift(incomingPlayer0);
       } else {
         loc.todaysPlayers.unshift(incomingPlayer0);
-        if (!hiddenPlayers.includes(incomingPlayer0.ddrCode)) {
-          str += '\n+ ' + incomingPlayer0.name + '    ' + incomingPlayer0.ddrCode;
-        }
-        console.log('\t> @' + loc.name + ': + ' + incomingPlayer0.toLocaleString());
-        tftiCheck(incomingPlayer0, loc.id);
+        playersToReport.push(incomingPlayer0);
       }
 
-      if (str !== '') {
-        pingChannelsForLocation(loc, monospace(str));
-      }
+      reportNewPlayers(loc, playersToReport);
     }
   });
 }
