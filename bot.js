@@ -209,14 +209,17 @@ function retrieveData(loc) {
         const errorMessage = `--> ${loc.name} @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ` + loc.cabs[cabIndex].cookieValue;
         console.error(errorMessage);
         throw new Error(errorMessage);
-      } else if ($('td.dancer_name').eq(0).text() === '' || $('td.dancer_name').eq(1).text() === '') {
-        console.error(`--> ${loc.name} @cab${cabIndex}: Ghosts appeared. Spooky af :monkaPrim:`);
       } else {
         const receivedPlayers = [];
         for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) { // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
+          let dancerName = $('td.dancer_name').eq(dancerIndex).text();
+          let ddrCode = $('td.code').eq(dancerIndex).text();
+          if (dancerName === '') {
+            console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
+          }
           receivedPlayers[dancerIndex] = new Player({
-            dancerName: $('td.dancer_name').eq(dancerIndex).text(),
-            ddrCode: $('td.code').eq(dancerIndex).text(),
+            dancerName,
+            ddrCode,
             loc,
           });
         }
