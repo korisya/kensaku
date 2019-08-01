@@ -1,6 +1,6 @@
 # kensaku
 
-A DDR machine-stalking Discord bot.
+A DDR machine-tracking Discord bot.
 
 ## Implementation
 
