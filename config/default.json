@@ -8,12 +8,13 @@
   "tftiPlayers": [
     "51448180"
   ],
-  "hiddenPlayers": [],
+  "visiblePlayers": [],
   "shops": [
     {
       "id": "san-jose-r1-esc",
       "timeZone": "America/Los_Angeles",
       "cookies": [
+        "fillllll-meee-innn-with-cookievaluee",
         "fillllll-meee-innn-with-cookievaluee",
         "fillllll-meee-innn-with-cookievaluee"
       ]
