@@ -243,6 +243,7 @@ function retrieveData(loc) {
           let ddrCode = $('td.code').eq(dancerIndex).text();
           if (dancerName === '') {
             console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
+            // TODO: If we find the dancerName for this ddrCode later on, then we should populate the dancerName.
           }
           receivedPlayers[dancerIndex] = new Player({
             dancerName,
@@ -271,10 +272,10 @@ function updatePlayerLists(loc) {
     // if the previous first player shifted down a spot
     if (cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode
       && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
-      var incomingPlayer = cab.newPlayers[0];
+      const incomingPlayer = cab.newPlayers[0];
 
       // Check for duplicates
-      var foundPlayer = cab.players.find(function(player) {
+      const foundPlayer = cab.players.find(function(player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
       console.log(`--> ${loc.name}: cab${cabIndex}.players before: ` + cab.players.toLocaleString());
@@ -293,7 +294,7 @@ function updatePlayerLists(loc) {
       console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
       // find out if the player is on today's list
-      var foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
+      const foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
 
@@ -311,13 +312,13 @@ function updatePlayerLists(loc) {
     else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode
       && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
 
-      var incomingPlayer0 = cab.newPlayers[0];
-      var incomingPlayer1 = cab.newPlayers[1];
+      const incomingPlayer0 = cab.newPlayers[0];
+      const incomingPlayer1 = cab.newPlayers[1];
 
-      var foundPlayer0 = cab.players.find(function(player) {
+      const foundPlayer0 = cab.players.find(function(player) {
         return player.ddrCode === incomingPlayer0.ddrCode;
       });
-      var foundPlayer1 = cab.players.find(function(player) {
+      const foundPlayer1 = cab.players.find(function(player) {
         return player.ddrCode === incomingPlayer1.ddrCode;
       });
 
@@ -346,10 +347,10 @@ function updatePlayerLists(loc) {
       }
       console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
-      var foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
+      const foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
         return player.ddrCode === incomingPlayer0.ddrCode;
       });
-      var foundTodaysPlayer1 = loc.todaysPlayers.find(function(player) {
+      const foundTodaysPlayer1 = loc.todaysPlayers.find(function(player) {
         return player.ddrCode === incomingPlayer1.ddrCode;
       });
 
