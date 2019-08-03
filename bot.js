@@ -521,6 +521,8 @@ function summaryHereString(loc, { includeList = true } = {}) {
       numActivePlayers++;
       if (visiblePlayers.includes(player.ddrCode)) {
         playerNamesTimes.push(`${player.name} ${timeSinceSeen.minOnly}m`);
+      } else {
+        playerNamesTimes.push(`${timeSinceSeen.minOnly}m`);
       }
     }
   });
