@@ -508,18 +508,17 @@ function reportTodaysPlayersForChannel(channel, loc) {
   }
 }
 
-
 function summaryHereString(loc, { includeList = true } = {}) {
   const currentTime = new Date();
   const nowString = timeString(currentTime, loc.timeZone);
 
-  let numPlayers = 0;
+  let numActivePlayers = 0;
   const playerNamesTimes = [];
 
   loc.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
-      numPlayers++;
+      numActivePlayers++;
       if (visiblePlayers.includes(player.ddrCode)) {
         playerNamesTimes.push(`${player.name} ${timeSinceSeen.minOnly}m`);
       }
@@ -529,7 +528,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
   let summaryHereString;
   if (loc.todaysPlayers.length === 0) {
     summaryHereString = `${nowString}: 0 players today.`;
-  } else if (numPlayers === 0) {
+  } else if (numActivePlayers === 0) {
     // TODO: If a hiddenPlayer is here, we'll still report them. Since this is pretty rare, just don't solve for this for now.
     const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
@@ -538,10 +537,14 @@ function summaryHereString(loc, { includeList = true } = {}) {
       summaryHereString += ` Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
     }
   } else {
-    const s = (numPlayers === 1) ? '' : 's';
-    summaryHereString = `${nowString}: ${numPlayers} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji}`;
+    const s = (numActivePlayers === 1) ? '' : 's';
+    summaryHereString = `${nowString}: ${numActivePlayers}/${loc.todaysPlayers.length} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji}`;
     if (includeList && playerNamesTimes.length !== 0) {
-      summaryHereString += ` (${playerNamesTimes.join(", ")})`;
+      let numAnonymousPlayers = numActivePlayers - playerNamesTimes.length;
+      let playersNamesTimesString = playerNamesTimes.join(", ");
+      let othersString = numAnonymousPlayers > 0 ? ` and ${numAnonymousPlayers} others` : '';
+      let commaString = othersString && playerNamesTimes.length > 1 ? ',' : '';
+      summaryHereString += ' (' + playersNamesTimesString + commaString + othersString + ')';
     }
   }
 
