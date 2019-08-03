@@ -493,8 +493,9 @@ function chunk(array, size) {
 
 function reportTodaysPlayersForChannel(channel, loc) {
   const todaysPlayers = getTodaysPlayers(loc);
+  const today = loc.todaysPlayers.length === 0 ? 'today.' : 'today:';
   const s = loc.todaysPlayers.length === 1 ? '' : 's';
-  let message = `${loc.todaysPlayers.length} player${s} today:`; // TODO: replace with YYYY-MM-DD
+  let message = `${loc.todaysPlayers.length} player${s} ${today}`; // TODO: replace with YYYY-MM-DD
   // Instead of trying to compute the perfect string length <= 2000, just safely/simply cut off at 48 players per message.
   chunk(todaysPlayers, 48).forEach(chunkOf48Players => {
     message += monospace(chunkOf48Players.join('\n'));
@@ -502,6 +503,9 @@ function reportTodaysPlayersForChannel(channel, loc) {
     channel.send(message);
     message = '';
   });
+  if (message) {
+    channel.send(message);
+  }
 }
 
 
