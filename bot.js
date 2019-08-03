@@ -7,11 +7,11 @@ const config = require('config');
 const adminDiscordTags = config.get('adminDiscordTags');
 const REFRESH_INTERVAL = config.get('refreshIntervalMs');
 
-// Special players
+// Special players who will get extra-exposed when they show up
 const tftiPlayers = config.get('tftiPlayers');
 
-// Hidden players
-const visiblePlayers = config.get('visiblePlayers');
+// Visible players who will get revealed when they show up
+const visiblePlayers = [...config.get('visiblePlayers')]; // Using object spread to clone the .get() array so that we can push new players in
 
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
@@ -616,6 +616,10 @@ client.on('message', message => {
         shop.cabs.splice(cabIndex, 1);
         console.log('after remove', shop.cabs.map(cab => cab.cookieValue));
         channel.send('Removed');
+      } else if (cmd === 'addvisibleplayer') {
+        const ddrCode = args[1];
+        visiblePlayers.push(ddrCode);
+        channel.send('Added');
       }
     } else if (cmd === 'whose' || cmd === 'here') {
       channel.send('Check the channel topic. (on mobile, swipe left from the right edge of your screen)');
