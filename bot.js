@@ -125,6 +125,8 @@ function getTodaysPlayers(shop) {
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
     if (visiblePlayers.includes(player.ddrCode)) {
       playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+    } else {
+      playerStrings.push(`${'xxxxxxxx'.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`)
     }
   });
   return playerStrings;
@@ -150,6 +152,8 @@ function tftiCheck(incomingPlayer, locationId) {
 function reportNewPlayer(loc, incomingPlayer) {
   if (visiblePlayers.includes(incomingPlayer.ddrCode)) {
     pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+  } else {
+    pingChannelsForLocation(loc, 'A new player appeared!');
   }
   tftiCheck(incomingPlayer, loc.id);
   console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
