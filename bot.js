@@ -107,9 +107,13 @@ function getRecentPlayers(shop) {
   // TODO: Use a reduce function
   shop.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
-    if (visiblePlayers.includes(player.ddrCode) && timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
+    if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
-      playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
+      if (visiblePlayers.includes(player.ddrCode)) {
+        playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
+      } else {
+        playerStrings.push(`${'xxxxxxxx'.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
+      }
     }
   });
   return playerStrings;
