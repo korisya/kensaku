@@ -55,6 +55,10 @@ function Player (args) {
   };
 }
 
+function playerIsVisible(player, shop) {
+  return (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
+}
+
 function isDailyMaintenanceTime() {
   const now = new Date();
   const japanHour = (now.getUTCHours() + 9) % 24;
@@ -99,6 +103,7 @@ function Location (loc) {
   this.cabs = loc.cabs;
   this.timeZone = loc.timeZone;
   this.todaysPlayers = [];
+  this.eventMode = loc.eventMode || false;
 }
 
 function getRecentPlayers(shop) {
@@ -109,7 +114,7 @@ function getRecentPlayers(shop) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       const firstTimeString = timeString(player.firstTime, player.loc.timeZone);
-      if (visiblePlayers.includes(player.ddrCode)) {
+      if (playerIsVisible(player, shop)) {
         playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
       } else {
         playerStrings.push(`********   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
@@ -127,7 +132,7 @@ function getTodaysPlayers(shop) {
     const firstTime = timeString(player.firstTime, player.loc.timeZone);
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
-    if (visiblePlayers.includes(player.ddrCode)) {
+    if (playerIsVisible(player, shop)) {
       playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
     } else {
       playerStrings.push(`********   ${firstTime} - ${lastTime}   (${timePlayed.str})`)
@@ -154,7 +159,7 @@ function tftiCheck(incomingPlayer, locationId) {
 }
 
 function reportNewPlayer(loc, incomingPlayer) {
-  if (visiblePlayers.includes(incomingPlayer.ddrCode)) {
+  if (playerIsVisible(incomingPlayer, loc)) {
     pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
   } else {
     pingChannelsForLocation(loc, 'A new player appeared!');
@@ -166,9 +171,7 @@ function reportNewPlayer(loc, incomingPlayer) {
 function reportNewPlayers(loc, players) {
   let combinedMessage = '';
   players.forEach(player => {
-    if (!visiblePlayers.includes(player.ddrCode)) {
-      console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
-    } else {
+    if (playerIsVisible(player, loc)) {
       if (combinedMessage) {
         combinedMessage += '\n';
       }
@@ -233,6 +236,7 @@ function retrieveData(loc) {
   if (loc.todaysPlayers.length !== 0 && (usShouldReport || jpShouldReport)) {
     reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
+    loc.eventMode = false; // By default, turn off event mode at the end of the day, even if events last multiple days.
   }
 
   console.log('--> ' + loc.name + ': Retrieving data...');
@@ -523,7 +527,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       numActivePlayers++;
-      if (visiblePlayers.includes(player.ddrCode)) {
+      if (playerIsVisible(player, loc)) {
         playerNamesTimes.push(`${player.name} ${timeSinceSeen.minOnly}m`);
       } else {
         playerNamesTimes.push(`${timeSinceSeen.minOnly}m`);
@@ -626,6 +630,16 @@ client.on('message', message => {
         const ddrCode = args[1];
         visiblePlayers.push(ddrCode);
         channel.send('Added');
+      } else if (cmd === 'removevisibleplayer') {
+        const ddrCode = args[1];
+        const index = visiblePlayers.indexOf(ddrCode);
+        if (index >= 0) {
+          visiblePlayers.splice(index, 1);
+        }
+        channel.send('Removed');
+      } else if (cmd === 'eventmode') {
+        shop.eventMode = !shop.eventMode;
+        channel.send('Event mode is now ' + (shop.eventMode ? 'on' : 'off'));
       }
     } else if (cmd === 'whose' || cmd === 'here') {
       channel.send('Check the channel topic. (on mobile, swipe left from the right edge of your screen)');
@@ -641,6 +655,7 @@ const ALL_LOCATIONS = CONFIG_LOCATIONS.map((shop) => {
     id: shop.id,
     timeZone: shop.timeZone,
     cabs: shop.cookies.map((cookie) => {return new Cab(cookie);}),
+    eventMode: shop.eventMode,
   });
 });
 
