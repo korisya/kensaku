@@ -112,7 +112,7 @@ function getRecentPlayers(shop) {
       if (visiblePlayers.includes(player.ddrCode)) {
         playerStrings.push(`${player.name.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
       } else {
-        playerStrings.push(`${'xxxxxxxx'.padEnd(8)}   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
+        playerStrings.push(`********   ${firstTimeString}   Seen ${timeSinceSeen.str} ago`);
       }
     }
   });
@@ -130,7 +130,7 @@ function getTodaysPlayers(shop) {
     if (visiblePlayers.includes(player.ddrCode)) {
       playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
     } else {
-      playerStrings.push(`${'xxxxxxxx'.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`)
+      playerStrings.push(`********   ${firstTime} - ${lastTime}   (${timePlayed.str})`)
     }
   });
   return playerStrings;
