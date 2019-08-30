@@ -171,17 +171,19 @@ function reportNewPlayer(loc, incomingPlayer) {
 function reportNewPlayers(loc, players) {
   let combinedMessage = '';
   players.forEach(player => {
+    if (combinedMessage) {
+      combinedMessage += '\n';
+    }
     if (playerIsVisible(player, loc)) {
-      if (combinedMessage) {
-        combinedMessage += '\n';
-      }
-      combinedMessage += `+ ${player.name}    ${player.ddrCode}`;
+      combinedMessage += monospace(`+ ${player.name}    ${player.ddrCode}`);
+    } else {
+      combinedMessage += 'A new player appeared!';
     }
     console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
     tftiCheck(player, loc.id);
   });
   if (combinedMessage) {
-    pingChannelsForLocation(loc, monospace(combinedMessage));
+    pingChannelsForLocation(loc, combinedMessage);
   }
 };
 
