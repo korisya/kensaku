@@ -163,7 +163,7 @@ function reportNewPlayer(loc, incomingPlayer) {
   if (playerIsVisible(incomingPlayer, loc)) {
     pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
   } else {
-    pingChannelsForLocation(loc, 'A new player has appeared!');
+    pingChannelsForLocation(loc, 'A player has appeared!');
   }
   tftiCheck(incomingPlayer, loc.id);
   console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
@@ -181,18 +181,18 @@ function reportNewPlayers(loc, players) {
     combinedMessage = monospace(playerMessages.join('\n'));
   } else if (!players.some(playerIsVisible)) { // All not visible
     if (players.length === 1) {
-      combinedMessage = 'A new player has appeared!';
+      combinedMessage = 'A player has appeared!';
     } else {
-      combinedMessage = `${players.length} new players have appeared!`;
+      combinedMessage = `${players.length} players have appeared!`;
     }
   } else { // Mixed visible/not-visible
     players.forEach(player => {
       // For mixed visible/not-visible, we don't want a newline - monospace will take care of us.
-      // This only works if we're reporting up to 2 new players, which we currently do (running on the bad assumption that it's only possible for up to 2 players to appear between polls)
+      // This only works if we're reporting up to 2 players, which we currently do (running on the bad assumption that it's only possible for up to 2 players to appear between polls)
       if (playerIsVisible(player, loc)) {
         combinedMessage += monospace(`+ ${player.name}    ${player.ddrCode}`);
       } else {
-        combinedMessage += 'A new player has appeared!';
+        combinedMessage += 'A player has appeared!';
       }
       console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
       tftiCheck(player, loc.id);
