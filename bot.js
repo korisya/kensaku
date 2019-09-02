@@ -293,7 +293,7 @@ function retrieveData(loc) {
 }
 
 // Updates player lists using new data
-function updatePlayerLists(loc) {
+function updatePlayerList(loc) {
   loc.cabs.forEach(function(cab, cabIndex) {
     if (!cab.players.length) {
       return;
@@ -408,6 +408,12 @@ function updatePlayerLists(loc) {
   });
 }
 
+function updatePlayerLists() {
+  return ALL_LOCATIONS.forEach((shop) => {
+    return updatePlayerList(shop);
+  });
+}
+
 // Removes players who move cabs
 function pruneData() {
   console.log('Pruning data. We should see this after we have retrieved all data.')
@@ -437,19 +443,9 @@ function update() {
   const locationPromises = ALL_LOCATIONS.map(loc => {
     const cabPromises = retrieveData(loc);
     return Promise.all(cabPromises)
-    .then(() => {
-      pruneData();
-      updatePlayerLists(loc);
-      updateChannelsTopicForLocation(loc);
-    })
     .catch((err) => {
       console.error(err, `${getUrl()} failed, retrying ${loc.id} with URL ${getUrl()}`);
       return Promise.all(retrieveData(loc))
-      .then(() => {
-        pruneData();
-        updatePlayerLists(loc);
-        updateChannelsTopicForLocation(loc);
-      })
       .catch(err => {
         const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
         console.error(errorMessage);
@@ -464,7 +460,10 @@ function update() {
     console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
   })
   .then(() => {
-    console.log('update() loop complete');
+    pruneData();
+    updatePlayerLists();
+    updateChannelTopics();
+    console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
     setTimeout(update, REFRESH_INTERVAL);
   });
 }
@@ -580,7 +579,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
 }
 
 function updateChannelTopic(loc, channel) {
-  channel.setTopic(summaryHereString(loc))
+  return channel.setTopic(summaryHereString(loc))
     .then(updated => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
     .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
@@ -590,8 +589,14 @@ function updateChannelsTopicForLocation(loc) {
   if (!channels.size) {
     console.error('Could not find channels for location ' + loc.id);
   } else {
-    channels.forEach((channel) => updateChannelTopic(loc, channel));
+    return channels.forEach((channel) => updateChannelTopic(loc, channel));
   }
+}
+
+function updateChannelTopics() {
+  return ALL_LOCATIONS.forEach((loc) => {
+    return updateChannelsTopicForLocation(loc);
+  });
 }
 
 client.on('error', console.error);
