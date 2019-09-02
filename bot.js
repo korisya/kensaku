@@ -163,7 +163,7 @@ function reportNewPlayer(loc, incomingPlayer) {
   if (playerIsVisible(incomingPlayer, loc)) {
     pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
   } else {
-    pingChannelsForLocation(loc, 'A new player appeared!');
+    pingChannelsForLocation(loc, 'A new player has appeared!');
   }
   tftiCheck(incomingPlayer, loc.id);
   console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
@@ -171,18 +171,33 @@ function reportNewPlayer(loc, incomingPlayer) {
 
 function reportNewPlayers(loc, players) {
   let combinedMessage = '';
-  players.forEach(player => {
-    if (combinedMessage) {
-      combinedMessage += '\n';
-    }
-    if (playerIsVisible(player, loc)) {
-      combinedMessage += monospace(`+ ${player.name}    ${player.ddrCode}`);
+  const playerMessages = [];
+  if (players.every(playerIsVisible)) { // All visible
+    players.forEach(player => {
+      playerMessages.push(`+ ${player.name}    ${player.ddrCode}`);
+      console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
+      tftiCheck(player, loc.id);
+    });
+    combinedMessage = monospace(playerMessages.join('\n'));
+  } else if (!players.some(playerIsVisible)) { // All not visible
+    if (players.length === 1) {
+      combinedMessage = 'A new player has appeared!';
     } else {
-      combinedMessage += 'A new player appeared!';
+      combinedMessage = `${players.length} new players have appeared!`;
     }
-    console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
-    tftiCheck(player, loc.id);
-  });
+  } else { // Mixed visible/not-visible
+    players.forEach(player => {
+      // For mixed visible/not-visible, we don't want a newline - monospace will take care of us.
+      // This only works if we're reporting up to 2 new players, which we currently do (running on the bad assumption that it's only possible for up to 2 players to appear between polls)
+      if (playerIsVisible(player, loc)) {
+        combinedMessage += monospace(`+ ${player.name}    ${player.ddrCode}`);
+      } else {
+        combinedMessage += 'A new player has appeared!';
+      }
+      console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
+      tftiCheck(player, loc.id);
+    });
+  }
   if (combinedMessage) {
     pingChannelsForLocation(loc, combinedMessage);
   }
