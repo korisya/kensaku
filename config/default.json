@@ -1,6 +1,7 @@
 {
   "discordBotToken": "FILL_ME_IN",
   "refreshIntervalMs": 60000,
+  "showAllNames": false,
   "adminDiscordTags": [
     "t3a#5609",
     "rw#0628"

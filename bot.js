@@ -6,6 +6,7 @@ const config = require('config');
 
 const adminDiscordTags = config.get('adminDiscordTags');
 const REFRESH_INTERVAL = config.get('refreshIntervalMs');
+const showAllNames = config.get('showAllNames');
 
 // Special players who will get extra-exposed when they show up
 const tftiPlayers = config.get('tftiPlayers');
@@ -56,7 +57,7 @@ function Player (args) {
 }
 
 function playerIsVisible(player, shop) {
-  return (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
+  return showAllNames || (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
 }
 
 function isDailyMaintenanceTime() {
