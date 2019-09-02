@@ -269,8 +269,8 @@ function retrieveData(loc) {
       } else {
         const receivedPlayers = [];
         for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) { // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
-          let dancerName = $('td.dancer_name').eq(dancerIndex).text();
-          let ddrCode = $('td.code').eq(dancerIndex).text();
+          const dancerName = $('td.dancer_name').eq(dancerIndex).text();
+          const ddrCode = $('td.code').eq(dancerIndex).text();
           if (dancerName === '') {
             console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
             // TODO: If we find the dancerName for this ddrCode later on, then we should populate the dancerName.
@@ -568,10 +568,10 @@ function summaryHereString(loc, { includeList = true } = {}) {
     const s = (numActivePlayers === 1) ? '' : 's';
     summaryHereString = `${nowString}: ${numActivePlayers}/${loc.todaysPlayers.length} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji}`;
     if (includeList && playerNamesTimes.length !== 0) {
-      let numAnonymousPlayers = numActivePlayers - playerNamesTimes.length;
-      let playersNamesTimesString = playerNamesTimes.join(", ");
-      let othersString = numAnonymousPlayers > 0 ? ` and ${numAnonymousPlayers} others` : '';
-      let commaString = othersString && playerNamesTimes.length > 1 ? ',' : '';
+      const numAnonymousPlayers = numActivePlayers - playerNamesTimes.length;
+      const playersNamesTimesString = playerNamesTimes.join(", ");
+      const othersString = numAnonymousPlayers > 0 ? ` and ${numAnonymousPlayers} others` : '';
+      const commaString = othersString && playerNamesTimes.length > 1 ? ',' : '';
       summaryHereString += ' (' + playersNamesTimesString + commaString + othersString + ')';
     }
   }
