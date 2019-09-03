@@ -178,7 +178,9 @@ function reportNewPlayers(loc, players) {
       console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
       tftiCheck(player, loc.id);
     });
-    combinedMessage = monospace(playerMessages.join('\n'));
+    if (playerMessages.length) {
+      combinedMessage = monospace(playerMessages.join('\n'));
+    }
   } else if (!players.some(playerIsVisible)) { // All not visible
     if (players.length === 1) {
       combinedMessage = 'A player has appeared!';
