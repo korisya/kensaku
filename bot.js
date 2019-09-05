@@ -16,7 +16,7 @@ const visiblePlayers = [...config.get('visiblePlayers')]; // Using object spread
 
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
-const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Stalking
+const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Tracking
 
 const msMinute = 60*1000;
 const msHour = 60*60*1000;
@@ -299,22 +299,27 @@ function updatePlayerList(loc) {
       return;
     }
 
-    // if the previous first player shifted down a spot
+    // Check if the previous first player shifted down a spot.
+    // We assume this means that cab.newPlayers[0] contains a player who just finished a game.
     if (cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode
       && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
       const incomingPlayer = cab.newPlayers[0];
 
-      // Check for duplicates
+      // Check if the incomingPlayer already exists in cab.players.
       const foundPlayer = cab.players.find(function(player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
       console.log(`--> ${loc.name}: cab${cabIndex}.players before: ` + cab.players.toLocaleString());
-      // if duplicate, remove and unshift. else unshift and pop
+
+      // Update cab.players with our new information.
       if (foundPlayer) {
+        // Remove the duplicate and re-add the incomingPlayer to the front of cab.players.
         cab.players.splice(cab.players.indexOf(foundPlayer), 1);
         cab.players.unshift(incomingPlayer);
       } else {
+        // Add the incomingPlayer to the front of cab.players.
         cab.players.unshift(incomingPlayer);
+        // Tries to keep cab.players the same length as it started.
         if (cab.prunedPlayers > 0) {
           cab.prunedPlayers--;
         } else {
@@ -323,22 +328,27 @@ function updatePlayerList(loc) {
       }
       console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
-      // find out if the player is on today's list
+      // Check if the incomingPlayer exists in loc.todaysPlayers.
       const foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
 
-      // if duplicate, remove and unshift. else unshift
+      // Update loc.todaysPlayers accordingly.
       if (foundTodaysPlayer) {
+        // The incomingPlayer has already played today, so we need to retrieve their first logout time.
+        // Remove the duplicate from loc.todaysPlayers, and re-add the incomingPlayer to the front of loc.todaysPlayers.
         incomingPlayer.firstTime = foundTodaysPlayer.firstTime;
         loc.todaysPlayers.splice(loc.todaysPlayers.indexOf(foundTodaysPlayer), 1);
         loc.todaysPlayers.unshift(incomingPlayer);
       } else {
-        // New player
+        // Ths incomingPlayer must be a new player.
+        // Add the incomingPlayer to the front of loc.todaysPlayers, and report to the channel.
         loc.todaysPlayers.unshift(incomingPlayer);
         reportNewPlayer(loc, incomingPlayer);
       }
-    } // else, if the first two players are different in any way
+    }
+    // Check if the first two players are different in any way (other than the previous situation).
+    // We assume that this means cab.newPlayers[0] and cab.newPlayers[1] both contain players who just finished a game together.
     else if (!(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode
       && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
 
