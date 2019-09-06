@@ -8,6 +8,10 @@ const adminDiscordTags = config.get('adminDiscordTags');
 const REFRESH_INTERVAL = config.get('refreshIntervalMs');
 const showAllNames = config.get('showAllNames');
 
+// Report time in UTC (GMT+0)
+const usReportTime = 12;
+const jpReportTime = 20;
+
 // Special players who will get extra-exposed when they show up
 const tftiPlayers = config.get('tftiPlayers');
 
@@ -104,6 +108,8 @@ function Location (loc) {
   this.cabs = loc.cabs;
   this.timeZone = loc.timeZone;
   this.todaysPlayers = [];
+  this.numPlayersEachHour = [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
   this.eventMode = loc.eventMode || false;
 }
 
@@ -244,16 +250,36 @@ function getInitialDataForCab({cab, cabIndex, shop}) {
 // Retrieves new data
 // Ideally this should be done in update() instead
 function retrieveData(loc) {
+  var now = new Date();
+
+  const isAmerica = loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1;
+
+  let nowReportTimeDiff = isAmerica ? now.getUTCHours() - usReportTime : now.getUTCHours() - jpReportTime;
+  if (nowReportTimeDiff <= 0) {
+      nowReportTimeDiff += 24;
+  }
+
+  if (loc.numPlayersEachHour[nowReportTimeDiff] < 0) {
+    let numPlayersLastHour = 0;
+    loc.todaysPlayers.forEach(function(player) {
+      const timeSinceSeen = timeDifferential(now, player.lastTime);
+      if (timeSinceSeen.minOnly <= 60) {
+        numPlayersLastHour++;
+      }
+    });
+    loc.numPlayersEachHour[nowReportTimeDiff - 1] = numPlayersLastHour;
+  }
+
   // What happens if people are playing during this hour? This would run multiple times in the hour
   // In Japan, should be impossible (daily maintenance or shop closed)
   // In USA, everything should be closed
-  var now = new Date();
-  const isAmerica = loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1;
-  const usShouldReport = isAmerica && now.getUTCHours() === 12; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 2am at the location's local time. Not important.
-  const jpShouldReport = !isAmerica && now.getUTCHours() === 20; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
+  const usShouldReport = isAmerica && now.getUTCHours() === usReportTime; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 2am at the location's local time. Not important.
+  const jpShouldReport = !isAmerica && now.getUTCHours() === jpReportTime; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
   if (loc.todaysPlayers.length !== 0 && (usShouldReport || jpShouldReport)) {
-    reportTodaysPlayers(loc);
+    reportTodaysPlayers(loc, true);
     loc.todaysPlayers = [];
+    loc.numPlayersEachHour = [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
     loc.eventMode = false; // By default, turn off event mode at the end of the day, even if events last multiple days.
   }
 
@@ -511,8 +537,8 @@ function pingChannelsForLocation(loc, message) {
     channels.forEach((channel) => pingChannel(channel, message));
   }
 }
-function reportTodaysPlayers(loc) {
-  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc));
+function reportTodaysPlayers(loc, showGraph) {
+  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc, showGraph));
 }
 
 // https://medium.com/@Dragonza/four-ways-to-chunk-an-array-e19c889eac4
@@ -526,7 +552,7 @@ function chunk(array, size) {
   return chunked_arr;
 }
 
-function reportTodaysPlayersForChannel(channel, loc) {
+function reportTodaysPlayersForChannel(channel, loc, showGraph) {
   const todaysPlayers = getTodaysPlayers(loc);
   const today = loc.todaysPlayers.length === 0 ? 'today.' : 'today:';
   const s = loc.todaysPlayers.length === 1 ? '' : 's';
@@ -540,6 +566,35 @@ function reportTodaysPlayersForChannel(channel, loc) {
   });
   if (message) {
     channel.send(message);
+  }
+
+  if (showGraph) {
+    var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
+
+    let graph = currentLocalTime.toLocaleDateString() + "\n```";
+    for (let index = 0; index < 24; index++) {
+      let timeHour = index + currentLocalTime.getHours();
+      if (timeHour >= 24) {
+        timeHour -= 24;
+      }
+
+      let timeString = ``;
+      if (timeHour === 0) {
+        timeString = `12 AM `;
+      } else if (timeHour === 12) {
+        timeString = `12 PM `;
+      } else if (timeHour < 12) {
+        timeString = `${timeHour} AM `;
+      } else {
+        timeString = `${timeHour - 12} PM `;
+      }
+
+      graph += `\n${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`; // 12 AM █████████
+    }
+    graph += "```";
+    if (graph) {
+      channel.send(graph);
+    }
   }
 }
 
@@ -620,7 +675,7 @@ client.on('message', message => {
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
     if (isAdmin && cmd === 'yeet') {
-      return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
+      return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc, false));
     }
 
     const channel = message.channel;
@@ -633,7 +688,7 @@ client.on('message', message => {
 
     if (isAdmin) {
       if (cmd === 'all') {
-        reportTodaysPlayersForChannel(channel, shop);
+        reportTodaysPlayersForChannel(channel, shop, true); // CHANGE TO FALSE
       } else if (cmd === 'here') {
         const recentPlayers = getRecentPlayers(shop);
         const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
