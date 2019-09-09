@@ -108,8 +108,9 @@ function Location (loc) {
   this.cabs = loc.cabs;
   this.timeZone = loc.timeZone;
   this.todaysPlayers = [];
-  this.numPlayersEachHour = [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  this.numPlayersEachHour = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
+  this.alreadyReported = false; // If you start the bot during a report hour, the bot will immediately report an empty day.
   this.eventMode = loc.eventMode || false;
 }
 
@@ -259,7 +260,7 @@ function retrieveData(loc) {
       nowReportTimeDiff += 24;
   }
 
-  if (loc.numPlayersEachHour[nowReportTimeDiff] < 0) {
+  if (loc.numPlayersEachHour[nowReportTimeDiff - 1] < 0) {
     let numPlayersLastHour = 0;
     loc.todaysPlayers.forEach(function(player) {
       const timeSinceSeen = timeDifferential(now, player.lastTime);
@@ -275,11 +276,19 @@ function retrieveData(loc) {
   // In USA, everything should be closed
   const usShouldReport = isAmerica && now.getUTCHours() === usReportTime; // 12pm GMT+0 = 4am PST, 5am PDT. TODO: Make it 2am at the location's local time. Not important.
   const jpShouldReport = !isAmerica && now.getUTCHours() === jpReportTime; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
-  if (loc.todaysPlayers.length !== 0 && (usShouldReport || jpShouldReport)) {
+
+  // We assume that neither of the report times are 23:00 GMT.
+  if (isAmerica && now.getUTCHours() === usReportTime + 1 || !isAmerica && now.getUTCHours() === jpReportTime + 1) {
+    loc.alreadyReported = false;
+    loc.numPlayersEachHour[23] = -1;
+  }
+
+  if (!loc.alreadyReported && (usShouldReport || jpShouldReport)) {
     reportTodaysPlayers(loc, true);
     loc.todaysPlayers = [];
-    loc.numPlayersEachHour = [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
+    loc.numPlayersEachHour = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0];
+    loc.alreadyReported = true;
     loc.eventMode = false; // By default, turn off event mode at the end of the day, even if events last multiple days.
   }
 
@@ -568,25 +577,25 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     channel.send(message);
   }
 
-  if (showGraph) {
+  if (showGraph && loc.todaysPlayers.length !== 0) {
     var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
 
-    let graph = currentLocalTime.toLocaleDateString() + "\n```";
+    let graph = "```";
     for (let index = 0; index < 24; index++) {
-      let timeHour = index + currentLocalTime.getHours();
-      if (timeHour >= 24) {
-        timeHour -= 24;
+      let hour = index + currentLocalTime.getHours();
+      if (hour >= 24) {
+        hour -= 24;
       }
 
       let timeString = ``;
-      if (timeHour === 0) {
+      if (hour === 0) {
         timeString = `12 AM `;
-      } else if (timeHour === 12) {
+      } else if (hour === 12) {
         timeString = `12 PM `;
-      } else if (timeHour < 12) {
-        timeString = `${timeHour} AM `;
+      } else if (hour < 12) {
+        timeString = `${hour} AM `;
       } else {
-        timeString = `${timeHour - 12} PM `;
+        timeString = `${hour - 12} PM `;
       }
 
       graph += `\n${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`; // 12 AM █████████
@@ -688,7 +697,7 @@ client.on('message', message => {
 
     if (isAdmin) {
       if (cmd === 'all') {
-        reportTodaysPlayersForChannel(channel, shop, true); // CHANGE TO FALSE
+        reportTodaysPlayersForChannel(channel, shop, false); // Change to true for debugging.
       } else if (cmd === 'here') {
         const recentPlayers = getRecentPlayers(shop);
         const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
