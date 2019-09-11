@@ -643,7 +643,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
     const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
     summaryHereString = `${nowString}: ${players} left! :eyes:`;
-    if (visiblePlayers.includes(loc.todaysPlayers[0].ddrCode)) {
+    if (playerIsVisible(loc.todaysPlayers[0], loc)) {
       summaryHereString += ` Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
     }
   } else {
