@@ -15,8 +15,9 @@ const jpReportTime = 20;
 // Special players who will get extra-exposed when they show up
 const tftiPlayers = config.get('tftiPlayers');
 
-// Visible players who will get revealed when they show up
-const visiblePlayers = [...config.get('visiblePlayers')]; // Using object spread to clone the .get() array so that we can push new players in
+// Using object spread to clone the .get() array so that we can push new players in
+const hiddenPlayers = [...config.get('hiddenPlayers')]; // Hidden players who never be shown, regardless of mode
+const visiblePlayers = [...config.get('visiblePlayers')]; // Visible players who will get revealed when they show up
 
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
@@ -61,7 +62,13 @@ function Player (args) {
 }
 
 function playerIsVisible(player, shop) {
-  return showAllNames || (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
+  if (showAllNames) {
+    return true;
+  } else if (hiddenPlayers.includes(player.ddrCode)) {
+    return false;
+  } else {
+    return (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
+  }
 }
 
 function isDailyMaintenanceTime() {
