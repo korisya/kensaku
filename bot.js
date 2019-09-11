@@ -71,6 +71,14 @@ function playerIsVisible(player, shop) {
   }
 }
 
+// Used to create unique versions of `playerIsVisible` per shop, so that we can use `.every` and `.some` readably.
+// https://stackoverflow.com/questions/27699493/javascript-partially-applied-function-how-to-bind-only-the-2nd-parameter/27699684#27699684
+function bind_trailing_args(fn, ...bound_args) {
+  return function(...args) {
+      return fn(...args, ...bound_args);
+  };
+}
+
 function isDailyMaintenanceTime() {
   const now = new Date();
   const japanHour = (now.getUTCHours() + 9) % 24;
@@ -186,7 +194,8 @@ function reportNewPlayer(loc, incomingPlayer) {
 function reportNewPlayers(loc, players) {
   let combinedMessage = '';
   const playerMessages = [];
-  if (players.every(playerIsVisible)) { // All visible
+  const playerIsVisibleForThisLocation = bind_trailing_args(playerIsVisible, loc);
+  if (players.every(playerIsVisibleForThisLocation)) { // All visible
     players.forEach(player => {
       playerMessages.push(`+ ${player.name}    ${player.ddrCode}`);
       console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
@@ -195,7 +204,7 @@ function reportNewPlayers(loc, players) {
     if (playerMessages.length) {
       combinedMessage = monospace(playerMessages.join('\n'));
     }
-  } else if (!players.some(playerIsVisible)) { // All not visible
+  } else if (!players.some(playerIsVisibleForThisLocation)) { // All not visible
     if (players.length === 1) {
       combinedMessage = 'A player has appeared!';
     } else {
