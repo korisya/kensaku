@@ -590,7 +590,28 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
 
     let graph = "```";
+
+    // Determine the hour at which the first player of the day is detected.
+    // This is when we should begin our graph.
+    let graphStartingIndex = 0;
     for (let index = 0; index < 24; index++) {
+      if (loc.numPlayersEachHour[index] > 0) {
+        graphStartingIndex = index;
+        break;
+      }
+    }
+
+    // Determine the hour at which the last player of the day is detected.
+    // This is when we should end our graph.
+    let graphEndingIndex = 23;
+    for (let index = 23; index >= 0; index--) {
+      if (loc.numPlayersEachHour[index] > 0) {
+        graphEndingIndex = index;
+        break;
+      }
+    }
+
+    for (let index = graphStartingIndex; index <= graphEndingIndex; index++) {
       let hour = index + currentLocalTime.getHours();
       if (hour >= 24) {
         hour -= 24;
