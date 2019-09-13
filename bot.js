@@ -582,11 +582,11 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     channel.send(message);
     message = '';
   });
-  if (message) {
+  if (message && loc.todaysPlayers.length) {
     channel.send(message);
   }
 
-  if (showGraph && loc.todaysPlayers.length !== 0) {
+  if (showGraph && loc.todaysPlayers.length) {
     var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
 
     let graph = "```";
