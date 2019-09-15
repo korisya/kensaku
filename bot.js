@@ -572,9 +572,9 @@ function chunk(array, size) {
 
 function reportTodaysPlayersForChannel(channel, loc, showGraph) {
   const todaysPlayers = getTodaysPlayers(loc);
-  const today = loc.todaysPlayers.length === 0 ? 'today.' : 'today:';
-  const s = loc.todaysPlayers.length === 1 ? '' : 's';
-  let message = `${loc.todaysPlayers.length} player${s} ${today}`; // TODO: replace with YYYY-MM-DD
+  const today = todaysPlayers.length === 0 ? 'today.' : 'today:';
+  const s = todaysPlayers.length === 1 ? '' : 's';
+  let message = `${todaysPlayers.length} player${s} ${today}`; // TODO: replace with YYYY-MM-DD
   // Instead of trying to compute the perfect string length <= 2000, just safely/simply cut off at 48 players per message.
   chunk(todaysPlayers, 48).forEach(chunkOf48Players => {
     message += monospace(chunkOf48Players.join('\n'));
@@ -582,11 +582,11 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     channel.send(message);
     message = '';
   });
-  if (message && loc.todaysPlayers.length) {
+  if (message && todaysPlayers.length) { // Any remaining message that wasn't chunked and sent
     channel.send(message);
   }
 
-  if (showGraph && loc.todaysPlayers.length) {
+  if (showGraph && todaysPlayers.length) {
     var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
 
     const graphStrings = ["..."];
@@ -632,11 +632,7 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     }
 
     graphStrings.push("...");
-    const graph = monospace(graphStrings.join('\n'))
-
-    if (graph) {
-      channel.send(graph);
-    }
+    channel.send(monospace(graphStrings.join('\n')));
   }
 }
 
