@@ -589,7 +589,7 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
   if (showGraph && loc.todaysPlayers.length) {
     var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
 
-    let graph = "```";
+    const graphStrings = ["..."];
 
     // Determine the hour at which the first player of the day is detected.
     // This is when we should begin our graph.
@@ -617,7 +617,7 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
         hour -= 24;
       }
 
-      let timeString = ``;
+      let timeString;
       if (hour === 0) {
         timeString = `12 AM `;
       } else if (hour === 12) {
@@ -628,9 +628,12 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
         timeString = `${hour - 12} PM `;
       }
 
-      graph += `\n${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`; // 12 AM █████████
+      graphStrings.push(`${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`); // 12 AM █████████
     }
-    graph += "```";
+
+    graphStrings.push("...");
+    const graph = monospace(graphStrings.join('\n'))
+
     if (graph) {
       channel.send(graph);
     }
