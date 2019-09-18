@@ -302,7 +302,7 @@ function retrieveData(loc) {
   }
 
   if (!loc.alreadyReported && (usShouldReport || jpShouldReport)) {
-    reportTodaysPlayers(loc, true);
+    reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
     loc.numPlayersEachHour = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                               -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0];
@@ -564,8 +564,8 @@ function pingChannelsForLocation(loc, message) {
     channels.forEach((channel) => pingChannel(channel, message));
   }
 }
-function reportTodaysPlayers(loc, showGraph) {
-  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc, showGraph));
+function reportTodaysPlayers(loc) {
+  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc));
 }
 
 // https://medium.com/@Dragonza/four-ways-to-chunk-an-array-e19c889eac4
@@ -579,11 +579,11 @@ function chunk(array, size) {
   return chunked_arr;
 }
 
-function reportTodaysPlayersForChannel(channel, loc, showGraph) {
+function reportTodaysPlayersForChannel(channel, loc) {
   const todaysPlayers = getTodaysPlayers(loc);
-  const today = loc.todaysPlayers.length === 0 ? 'today.' : 'today:';
-  const s = loc.todaysPlayers.length === 1 ? '' : 's';
-  let message = `${loc.todaysPlayers.length} player${s} ${today}`; // TODO: replace with YYYY-MM-DD
+  const today = todaysPlayers.length === 0 ? 'today.' : 'today:';
+  const s = todaysPlayers.length === 1 ? '' : 's';
+  let message = `${todaysPlayers.length} player${s} ${today}`; // TODO: replace with YYYY-MM-DD
   // Instead of trying to compute the perfect string length <= 2000, just safely/simply cut off at 48 players per message.
   chunk(todaysPlayers, 48).forEach(chunkOf48Players => {
     message += monospace(chunkOf48Players.join('\n'));
@@ -591,14 +591,20 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     channel.send(message);
     message = '';
   });
-  if (message && loc.todaysPlayers.length) {
+  if (message && todaysPlayers.length) { // Any remaining message that wasn't chunked and sent
     channel.send(message);
   }
 
-  if (showGraph && loc.todaysPlayers.length) {
-    var currentLocalTime = new Date(new Date().toLocaleString("en-US", {timeZone: loc.timeZone}));
+  if (todaysPlayers.length && loc.numPlayersEachHour.some((element) => { return element > 0 })) {
+    var reportTime = new Date();
+    if (loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1) {
+      reportTime.setUTCHours(usReportTime)
+    } else {
+      reportTime.setUTCHours(jpReportTime);
+    }
+    var localReportTime = new Date(reportTime.toLocaleString("en-US", {timeZone: loc.timeZone}));
 
-    let graph = "```";
+    const graphStrings = ["..."];
 
     // Determine the hour at which the first player of the day is detected.
     // This is when we should begin our graph.
@@ -621,12 +627,9 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
     }
 
     for (let index = graphStartingIndex; index <= graphEndingIndex; index++) {
-      let hour = index + currentLocalTime.getHours();
-      if (hour >= 24) {
-        hour -= 24;
-      }
+      const hour = (index + localReportTime.getHours()) % 24;
 
-      let timeString = ``;
+      let timeString;
       if (hour === 0) {
         timeString = `12 AM `;
       } else if (hour === 12) {
@@ -637,12 +640,11 @@ function reportTodaysPlayersForChannel(channel, loc, showGraph) {
         timeString = `${hour - 12} PM `;
       }
 
-      graph += `\n${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`; // 12 AM █████████
+      graphStrings.push(`${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`); // 12 AM █████████
     }
-    graph += "```";
-    if (graph) {
-      channel.send(graph);
-    }
+
+    graphStrings.push("...");
+    channel.send(monospace(graphStrings.join('\n')));
   }
 }
 
@@ -723,7 +725,7 @@ client.on('message', message => {
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
     if (isAdmin && cmd === 'yeet') {
-      return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc, false));
+      return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
     }
 
     const channel = message.channel;
@@ -736,7 +738,7 @@ client.on('message', message => {
 
     if (isAdmin) {
       if (cmd === 'all') {
-        reportTodaysPlayersForChannel(channel, shop, false); // Change to true for debugging.
+        reportTodaysPlayersForChannel(channel, shop); // Change to true for debugging.
       } else if (cmd === 'here') {
         const recentPlayers = getRecentPlayers(shop);
         const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
