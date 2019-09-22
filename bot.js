@@ -587,7 +587,7 @@ function reportTodaysPlayersForChannel(channel, loc) {
     channel.send(message);
   }
 
-  if (todaysPlayers.length && loc.numPlayersEachHour.some((element) => { return element > 0 })) {
+  if (todaysPlayers.length && loc.numPlayersEachHour.some(element => element > 0)) {
     var reportTime = new Date();
     if (loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1) {
       reportTime.setUTCHours(usReportTime)
@@ -632,7 +632,12 @@ function reportTodaysPlayersForChannel(channel, loc) {
         timeString = `${hour - 12} PM `;
       }
 
-      graphStrings.push(`${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')}`); // 12 AM █████████
+      if (loc.numPlayersEachHour[index] > 0) {
+        graphStrings.push(`${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')} ${loc.numPlayersEachHour[index]}`); // 12 AM █████ 5
+      } else {
+        graphStrings.push(`${timeString.padStart(6)}`);
+      }
+
     }
 
     graphStrings.push("...");
