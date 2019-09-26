@@ -722,6 +722,7 @@ client.on('message', message => {
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
     if (isAdmin && cmd === 'yeet') {
+      // TODO: Only reportTodaysPlayers to the server that the message came from.
       return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
     }
 
@@ -736,11 +737,6 @@ client.on('message', message => {
     if (isAdmin) {
       if (cmd === 'all') {
         reportTodaysPlayersForChannel(channel, shop); // Change to true for debugging.
-      } else if (cmd === 'here') {
-        const recentPlayers = getRecentPlayers(shop);
-        const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
-        console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
-        channel.send(response);
       } else if (cmd === 'addcab') {
         const cookieValue = args[1];
         const cab = new Cab(cookieValue);
@@ -780,8 +776,13 @@ client.on('message', message => {
           channel.send('Dancer-name-reveal behavior is now back to default.')
         }
       }
-    } else if (cmd === 'whose' || cmd === 'here') {
-      channel.send('Check the channel topic. (on mobile, swipe left from the right edge of your screen)');
+    } else if (cmd === 'here') {
+      const recentPlayers = getRecentPlayers(shop);
+      const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
+      console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
+      channel.send(response);
+    } else if (cmd === 'whose') {
+      channel.send('joe mamma... hoes mad');
     }
   }
 });
