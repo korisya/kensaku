@@ -174,48 +174,29 @@ function tftiCheck(incomingPlayer, locationId) {
 
 function reportNewPlayer(loc, incomingPlayer) {
   if (playerIsVisible(incomingPlayer, loc)) {
-    pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name}     ${incomingPlayer.ddrCode}`));
+    pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name.padEnd(8)} ${incomingPlayer.ddrCode}`));
   } else {
-    pingChannelsForLocation(loc, 'A player has appeared!');
+    pingChannelsForLocation(loc, monospace('+ ******** ********'));
   }
   tftiCheck(incomingPlayer, loc.id);
   console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
 };
 
 function reportNewPlayers(loc, players) {
-  let combinedMessage = '';
-  const playerMessages = [];
+  let playersToReport = [];
 
-  if (players.every(player => playerIsVisible(player, loc))) { // All visible
-    players.forEach(player => {
-      playerMessages.push(`+ ${player.name}    ${player.ddrCode}`);
-      console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
-      tftiCheck(player, loc.id);
-    });
-    if (playerMessages.length) {
-      combinedMessage = monospace(playerMessages.join('\n'));
-    }
-  } else if (!players.some(player => playerIsVisible(player, loc))) { // All not visible
-    if (players.length === 1) {
-      combinedMessage = 'A player has appeared!';
+  players.forEach(player => {
+    if (playerIsVisible(player, loc)) {
+      playersToReport.push(`+ ${player.name.padEnd(8)} ${player.ddrCode}`);
     } else {
-      combinedMessage = `${players.length} players have appeared!`;
+      playersToReport.push('+ ******** ********');
     }
-  } else { // Mixed visible/not-visible
-    players.forEach(player => {
-      // For mixed visible/not-visible, we don't want a newline - monospace will take care of us.
-      // This only works if we're reporting up to 2 players, which we currently do (running on the bad assumption that it's only possible for up to 2 players to appear between polls)
-      if (playerIsVisible(player, loc)) {
-        combinedMessage += monospace(`+ ${player.name}    ${player.ddrCode}`);
-      } else {
-        combinedMessage += 'A player has appeared!';
-      }
-      console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
-      tftiCheck(player, loc.id);
-    });
-  }
-  if (combinedMessage) {
-    pingChannelsForLocation(loc, combinedMessage);
+    console.log(`\t> @${loc.name}: + ` + player.toLocaleString());
+    tftiCheck(player, loc.id);
+  });
+
+  if (playersToReport.length) {
+    pingChannelsForLocation(loc, monospace(playersToReport.join('\n')));
   }
 };
 
