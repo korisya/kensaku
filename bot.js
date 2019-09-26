@@ -774,7 +774,11 @@ client.on('message', message => {
         channel.send('Removed');
       } else if (cmd === 'eventmode') {
         shop.eventMode = !shop.eventMode;
-        channel.send('Event mode is now ' + (shop.eventMode ? 'on' : 'off'));
+        if (shop.eventMode) {
+          channel.send('Dancer names will now be revealed automatically.');
+        } else {
+          channel.send('Dancer-name-reveal behavior is now back to default.')
+        }
       }
     } else if (cmd === 'whose' || cmd === 'here') {
       channel.send('Check the channel topic. (on mobile, swipe left from the right edge of your screen)');
