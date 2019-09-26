@@ -147,9 +147,9 @@ function getTodaysPlayers(shop) {
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
     if (playerIsVisible(player, shop)) {
-      playerStrings.push(`${player.name.padEnd(8)}   ${firstTime} - ${lastTime}   (${timePlayed.str})`);
+      playerStrings.push(`${player.name.padEnd(8)} ${player.ddrCode} (${timePlayed.str})`);
     } else {
-      playerStrings.push(`********   ${firstTime} - ${lastTime}   (${timePlayed.str})`)
+      playerStrings.push(`******** ******** (${timePlayed.str})`)
     }
   });
   return playerStrings;
