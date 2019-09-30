@@ -176,7 +176,7 @@ function getTodaysPlayers(shop) {
       playerStrings.push(`******** ******** (${timePlayed.str})`);
     }
   });
-  return playerStrings.sort();
+  return playerStrings;
 }
 
 function tftiCheck(incomingPlayer, locationId) {
