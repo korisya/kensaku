@@ -797,7 +797,14 @@ client.on('message', message => {
       return;
     }
 
-    if (isAdmin) {
+    if (cmd === 'here') {
+      const recentPlayers = getRecentPlayers(shop);
+      const response = summaryHereString(shop, { includeList: false }) + monospace(recentPlayers.join('\n'));
+      console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
+      channel.send(response);
+    } else if (cmd === 'whose') {
+      channel.send('joe mamma... hoes mad');
+    } else if (isAdmin) {
       if (cmd === 'all') {
         reportTodaysPlayersForChannel(channel, shop); // Change to true for debugging.
       } else if (cmd === 'addcab') {
@@ -841,13 +848,6 @@ client.on('message', message => {
           channel.send('Dancer-name-reveal behavior is now back to default.');
         }
       }
-    } else if (cmd === 'here') {
-      const recentPlayers = getRecentPlayers(shop);
-      const response = summaryHereString(shop, { includeList: false }) + monospace(recentPlayers.join('\n'));
-      console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
-      channel.send(response);
-    } else if (cmd === 'whose') {
-      channel.send('joe mamma... hoes mad');
     }
   }
 });
