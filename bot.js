@@ -23,8 +23,8 @@ const visiblePlayers = [...config.get('visiblePlayers')]; // Visible players who
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
 const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Tracking
 
-const msMinute = 60*1000;
-const msHour = 60*60*1000;
+const msMinute = 60 * 1000;
+const msHour = 60 * 60 * 1000;
 const RECENT_PLAYER_CUTOFF_MINUTES = 90;
 function timeDifferential(nowTime, beforeTime) {
   const hr = Math.floor((nowTime - beforeTime) / msHour);
@@ -34,7 +34,7 @@ function timeDifferential(nowTime, beforeTime) {
     h: hr,
     m: min,
     minOnly: minOnly,
-    str: `${hr}h ${min}m`
+    str: `${hr}h ${min}m`,
   };
 }
 function timeString(time, timeZone) {
@@ -42,12 +42,12 @@ function timeString(time, timeZone) {
     hour12: true,
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: timeZone
+    timeZone: timeZone,
   });
 }
 
 // Constructor for Players
-function Player (args) {
+function Player(args) {
   this.name = args.dancerName;
   this.ddrCode = args.ddrCode;
   this.loc = args.loc;
@@ -56,7 +56,7 @@ function Player (args) {
   this.lastTime = new Date();
 
   // TODO: Fix constructing the same function repeatedly for every Player instance
-  this.toLocaleString = function () {
+  this.toLocaleString = function() {
     return this.name + ' ' + this.ddrCode;
   };
 }
@@ -93,30 +93,54 @@ function getUrl() {
 }
 
 // Constructor for cabs
-function Cab (cookieValue) {
+function Cab(cookieValue) {
   this.players = [];
   this.newPlayers = [];
   this.cookieValue = cookieValue;
   this.cookie = new tough.Cookie({
-    key: "M573SSID",
+    key: 'M573SSID',
     value: cookieValue,
     domain: 'p.eagate.573.jp',
     httpOnly: true,
-    maxAge: 31536000
+    maxAge: 31536000,
   });
   this.cookiejar = RequestPromise.jar();
   this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
   this.prunedPlayers = 0;
 }
 // Constructor for locations
-function Location (loc) {
+function Location(loc) {
   this.name = loc.name;
   this.id = loc.id;
   this.cabs = loc.cabs;
   this.timeZone = loc.timeZone;
   this.todaysPlayers = [];
-  this.numPlayersEachHour = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
+  this.numPlayersEachHour = [
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+  ];
   this.alreadyReported = false; // If you start the bot during a report hour, the bot will immediately report an empty day.
   this.eventMode = loc.eventMode || false;
 }
@@ -136,7 +160,7 @@ function getRecentPlayers(shop) {
     }
   });
   return playerStrings;
-};
+}
 
 function getTodaysPlayers(shop) {
   const currentTime = new Date();
@@ -149,7 +173,7 @@ function getTodaysPlayers(shop) {
     if (playerIsVisible(player, shop)) {
       playerStrings.push(`${player.name.padEnd(8)} ${player.ddrCode} (${timePlayed.str})`);
     } else {
-      playerStrings.push(`******** ******** (${timePlayed.str})`)
+      playerStrings.push(`******** ******** (${timePlayed.str})`);
     }
   });
   return playerStrings.sort();
@@ -157,15 +181,15 @@ function getTodaysPlayers(shop) {
 
 function tftiCheck(incomingPlayer, locationId) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-    getChannelsWithName('tfti').map((tftiChannel) => {
+    getChannelsWithName('tfti').map(tftiChannel => {
       const locationIdChannel = tftiChannel.guild.channels.find(c => c.name === locationId);
       const locationIdString = locationIdChannel ? locationIdChannel.toString() : '#' + locationId;
 
-      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find((emoji) => emoji.name === 'TFTI');
+      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find(emoji => emoji.name === 'TFTI');
       const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${locationIdString}! ${tftiEmojiForThisGuild}`;
 
       console.info(`Sending message to ${tftiChannel.guild.name}/#tfti: ${tftiMessage}`);
-      tftiChannel.send(tftiMessage).then((message) => {
+      tftiChannel.send(tftiMessage).then(message => {
         message.react(tftiEmojiForThisGuild);
       });
     });
@@ -180,7 +204,7 @@ function reportNewPlayer(loc, incomingPlayer) {
   }
   tftiCheck(incomingPlayer, loc.id);
   console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
-};
+}
 
 function reportNewPlayers(loc, players) {
   let playersToReport = [];
@@ -198,7 +222,7 @@ function reportNewPlayers(loc, players) {
   if (playersToReport.length) {
     pingChannelsForLocation(loc, monospace(playersToReport.join('\n')));
   }
-};
+}
 
 // Gets initial data
 // Ideally, we'd just retrieveData() or do whatever we do repeatedly (no special case and no duplicated code for the first run)
@@ -213,27 +237,40 @@ function getInitialData(shop) {
   });
 }
 
-function getInitialDataForCab({cab, cabIndex, shop}) {
-  return RequestPromise({jar: cab.cookiejar, uri: getUrl()})
-  .then((body) => {
+function getInitialDataForCab({ cab, cabIndex, shop }) {
+  return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then(body => {
     const $ = cheerio.load(body);
     const dancerRows = $('td.dancer_name').get().length;
-    if (dancerRows === 0) { // Error state - we won't work here. Happens during maintenance.
+    if (dancerRows === 0) {
+      // Error state - we won't work here. Happens during maintenance.
       // We have to restart.
-      const error = `0 dancers found at ${shop.id} cab${cabIndex}. Restart the bot. username:` + $('#user_name .name_str').get().map(n => $(n).text()) + ' rival_list:' + $('table.tb_rival_list');
+      const error =
+        `0 dancers found at ${shop.id} cab${cabIndex}. Restart the bot. username:` +
+        $('#user_name .name_str')
+          .get()
+          .map(n => $(n).text()) +
+        ' rival_list:' +
+        $('table.tb_rival_list');
       console.error(error);
       throw new Error(error);
     }
 
     console.log(`getInitialData ${shop.id} @cab${cabIndex} found ${dancerRows} dancers:`);
     // Parses data
-    for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) { // Get up to 7 dancers, but don't break if we have less than 20
+    for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) {
+      // Get up to 7 dancers, but don't break if we have less than 20
       cab.players[dancerIndex] = new Player({
-        dancerName: $('td.dancer_name').eq(dancerIndex).text(),
-        ddrCode: $('td.code').eq(dancerIndex).text(),
+        dancerName: $('td.dancer_name')
+          .eq(dancerIndex)
+          .text(),
+        ddrCode: $('td.code')
+          .eq(dancerIndex)
+          .text(),
         loc: shop,
       });
-      console.log(`--> ${shop.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString());
+      console.log(
+        `--> ${shop.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString()
+      );
     }
   });
 }
@@ -247,7 +284,7 @@ function retrieveData(loc) {
 
   let nowReportTimeDiff = isAmerica ? now.getUTCHours() - usReportTime : now.getUTCHours() - jpReportTime;
   if (nowReportTimeDiff <= 0) {
-      nowReportTimeDiff += 24;
+    nowReportTimeDiff += 24;
   }
 
   if (loc.numPlayersEachHour[nowReportTimeDiff - 1] < 0) {
@@ -268,7 +305,7 @@ function retrieveData(loc) {
   const jpShouldReport = !isAmerica && now.getUTCHours() === jpReportTime; // 8pm GMT+0 = 5am Japan (beginning of maintenance)
 
   // We assume that neither of the report times are 23:00 GMT.
-  if (isAmerica && now.getUTCHours() === usReportTime + 1 || !isAmerica && now.getUTCHours() === jpReportTime + 1) {
+  if ((isAmerica && now.getUTCHours() === usReportTime + 1) || (!isAmerica && now.getUTCHours() === jpReportTime + 1)) {
     loc.alreadyReported = false;
     loc.numPlayersEachHour[23] = -1;
   }
@@ -276,26 +313,57 @@ function retrieveData(loc) {
   if (!loc.alreadyReported && (usShouldReport || jpShouldReport)) {
     reportTodaysPlayers(loc);
     loc.todaysPlayers = [];
-    loc.numPlayersEachHour = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                              -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0];
+    loc.numPlayersEachHour = [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+    ];
     loc.alreadyReported = true;
     loc.eventMode = false; // By default, turn off event mode at the end of the day, even if events last multiple days.
   }
 
   console.log('--> ' + loc.name + ': Retrieving data...');
   return loc.cabs.map((cab, cabIndex) => {
-    return RequestPromise({jar: cab.cookiejar, uri: getUrl()}).then((body) => {
+    return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then(body => {
       const $ = cheerio.load(body);
       const dancerCount = $('td.dancer_name').length;
       if (dancerCount === 0) {
-        const errorMessage = `--> ${loc.name} @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ` + loc.cabs[cabIndex].cookieValue;
+        const errorMessage =
+          `--> ${loc.name} @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ` +
+          loc.cabs[cabIndex].cookieValue;
         console.error(errorMessage);
         throw new Error(errorMessage);
       } else {
         const receivedPlayers = [];
-        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) { // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
-          const dancerName = $('td.dancer_name').eq(dancerIndex).text();
-          const ddrCode = $('td.code').eq(dancerIndex).text();
+        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) {
+          // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
+          const dancerName = $('td.dancer_name')
+            .eq(dancerIndex)
+            .text();
+          const ddrCode = $('td.code')
+            .eq(dancerIndex)
+            .text();
           if (dancerName === '') {
             console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
             // TODO: If we find the dancerName for this ddrCode later on, then we should populate the dancerName.
@@ -326,9 +394,13 @@ function updatePlayerList(loc) {
 
     // Check if the previous first player shifted down a spot.
     // We assume this means that cab.newPlayers[0] contains a player who just finished a game.
-    if (cab.players[0] && cab.newPlayers[0] && cab.newPlayers[1] // TODO: Use option-chaining when possible to safely check object properties
-      && cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode
-      && cab.players[0].ddrCode === cab.newPlayers[1].ddrCode) {
+    if (
+      cab.players[0] &&
+      cab.newPlayers[0] &&
+      cab.newPlayers[1] && // TODO: Use option-chaining when possible to safely check object properties
+      cab.players[0].ddrCode !== cab.newPlayers[0].ddrCode &&
+      cab.players[0].ddrCode === cab.newPlayers[1].ddrCode
+    ) {
       const incomingPlayer = cab.newPlayers[0];
 
       // Check if the incomingPlayer already exists in cab.players.
@@ -375,10 +447,12 @@ function updatePlayerList(loc) {
     }
     // Check if the first two players are different in any way (other than the previous situation).
     // We assume that this means cab.newPlayers[0] and cab.newPlayers[1] both contain players who just finished a game together.
-    else if (cab.players[0] && cab.newPlayers[0] && cab.newPlayers[1] // TODO: Use option-chaining when possible to safely check object properties
-      && !(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode
-      && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)) {
-
+    else if (
+      cab.players[0] &&
+      cab.newPlayers[0] &&
+      cab.newPlayers[1] && // TODO: Use option-chaining when possible to safely check object properties
+      !(cab.players[0].ddrCode === cab.newPlayers[0].ddrCode && cab.players[1].ddrCode === cab.newPlayers[1].ddrCode)
+    ) {
       const incomingPlayer0 = cab.newPlayers[0];
       const incomingPlayer1 = cab.newPlayers[1];
 
@@ -446,14 +520,14 @@ function updatePlayerList(loc) {
 }
 
 function updatePlayerLists() {
-  return ALL_LOCATIONS.forEach((shop) => {
+  return ALL_LOCATIONS.forEach(shop => {
     return updatePlayerList(shop);
   });
 }
 
 // Removes players who move cabs
 function pruneData() {
-  console.log('Pruning data. We should see this after we have retrieved all data.')
+  console.log('Pruning data. We should see this after we have retrieved all data.');
   ALL_LOCATIONS.forEach(function(loc1) {
     ALL_LOCATIONS.forEach(function(loc2) {
       loc1.cabs.forEach(function(cab1) {
@@ -464,7 +538,9 @@ function pruneData() {
                 return player.ddrCode === newPlayer.ddrCode;
               });
               if (foundPlayer) {
-                console.log('--> ' + loc2.name + ' to ' + loc1.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString());
+                console.log(
+                  '--> ' + loc2.name + ' to ' + loc1.name + ': stop switching cabs pls, ' + foundPlayer.toLocaleString()
+                );
                 cab2.players.splice(cab2.players.indexOf(foundPlayer), 1);
                 cab2.prunedPlayers++;
               }
@@ -479,12 +555,11 @@ function pruneData() {
 function update() {
   const locationPromises = ALL_LOCATIONS.map(loc => {
     const cabPromises = retrieveData(loc);
-    return Promise.all(cabPromises)
-    .catch((err) => {
+    return Promise.all(cabPromises).catch(err => {
       console.error(err, `${getUrl()} failed, retrying ${loc.id} with URL ${getUrl()}`);
-      return Promise.all(retrieveData(loc))
-      .catch(err => {
-        const errorMessage = '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
+      return Promise.all(retrieveData(loc)).catch(err => {
+        const errorMessage =
+          '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
         console.error(errorMessage);
         throw new Error(errorMessage);
       });
@@ -492,17 +567,19 @@ function update() {
   });
 
   Promise.all(locationPromises)
-  .catch(err => {
-    console.log(err);
-    console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
-  })
-  .then(() => {
-    pruneData();
-    updatePlayerLists();
-    updateChannelTopics();
-    console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
-    setTimeout(update, REFRESH_INTERVAL);
-  });
+    .catch(err => {
+      console.log(err);
+      console.log(
+        '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n'
+      );
+    })
+    .then(() => {
+      pruneData();
+      updatePlayerLists();
+      updateChannelTopics();
+      console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
+      setTimeout(update, REFRESH_INTERVAL);
+    });
 }
 
 // Initialize Discord Bot
@@ -518,7 +595,7 @@ client.on('ready', () => {
 // Plus we have the same channel name on multiple guilds
 function getChannelsWithName(name) {
   return client.channels.filter(channel => channel.name === name);
-};
+}
 
 function monospace(message) {
   return '```' + (message || ' ') + '```';
@@ -535,7 +612,7 @@ function pingChannelsForLocation(loc, message) {
   if (!channels.size) {
     console.error('Could not find channels for location ' + loc.id);
   } else {
-    channels.forEach((channel) => pingChannel(channel, message));
+    channels.forEach(channel => pingChannel(channel, message));
   }
 }
 function reportTodaysPlayers(loc) {
@@ -565,20 +642,21 @@ function reportTodaysPlayersForChannel(channel, loc) {
     channel.send(message);
     message = '';
   });
-  if (message && todaysPlayers.length) { // Any remaining message that wasn't chunked and sent
+  if (message && todaysPlayers.length) {
+    // Any remaining message that wasn't chunked and sent
     channel.send(message);
   }
 
   if (todaysPlayers.length && loc.numPlayersEachHour.some(element => element > 0)) {
     var reportTime = new Date();
     if (loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1) {
-      reportTime.setUTCHours(usReportTime)
+      reportTime.setUTCHours(usReportTime);
     } else {
       reportTime.setUTCHours(jpReportTime);
     }
-    var localReportTime = new Date(reportTime.toLocaleString("en-US", {timeZone: loc.timeZone}));
+    var localReportTime = new Date(reportTime.toLocaleString('en-US', { timeZone: loc.timeZone }));
 
-    const graphStrings = ["..."];
+    const graphStrings = ['...'];
 
     // Determine the hour at which the first player of the day is detected.
     // This is when we should begin our graph.
@@ -615,14 +693,15 @@ function reportTodaysPlayersForChannel(channel, loc) {
       }
 
       if (loc.numPlayersEachHour[index] > 0) {
-        graphStrings.push(`${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')} ${loc.numPlayersEachHour[index]}`); // 12 AM █████ 5
+        graphStrings.push(
+          `${timeString.padStart(6).padEnd(6 + loc.numPlayersEachHour[index], '█')} ${loc.numPlayersEachHour[index]}`
+        ); // 12 AM █████ 5
       } else {
         graphStrings.push(`${timeString.padStart(6)}`);
       }
-
     }
 
-    graphStrings.push("...");
+    graphStrings.push('...');
     channel.send(monospace(graphStrings.join('\n')));
   }
 }
@@ -651,18 +730,19 @@ function summaryHereString(loc, { includeList = true } = {}) {
     summaryHereString = `${nowString}: 0 players today.`;
   } else if (numActivePlayers === 0) {
     // TODO: If a hiddenPlayer is here, we'll still report them. Since this is pretty rare, just don't solve for this for now.
-    const players = (loc.todaysPlayers.length === 1) ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
+    const players =
+      loc.todaysPlayers.length === 1 ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
     summaryHereString = `${nowString}: ${players} left! :eyes:`;
     if (playerIsVisible(loc.todaysPlayers[0], loc)) {
       summaryHereString += ` Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
     }
   } else {
-    const s = (numActivePlayers === 1) ? '' : 's';
+    const s = numActivePlayers === 1 ? '' : 's';
     summaryHereString = `${nowString}: ${numActivePlayers}/${loc.todaysPlayers.length} player${s} in the last ${RECENT_PLAYER_CUTOFF_MINUTES} minutes. :eyes: ${tftiEmoji}`;
     if (includeList && playerNamesTimes.length !== 0) {
       const numAnonymousPlayers = numActivePlayers - playerNamesTimes.length;
-      const playersNamesTimesString = playerNamesTimes.join(", ");
+      const playersNamesTimesString = playerNamesTimes.join(', ');
       const othersString = numAnonymousPlayers > 0 ? ` and ${numAnonymousPlayers} others` : '';
       const commaString = othersString && playerNamesTimes.length > 1 ? ',' : '';
       summaryHereString += ' (' + playersNamesTimesString + commaString + othersString + ')';
@@ -673,9 +753,10 @@ function summaryHereString(loc, { includeList = true } = {}) {
 }
 
 function updateChannelTopic(loc, channel) {
-  return channel.setTopic(summaryHereString(loc))
+  return channel
+    .setTopic(summaryHereString(loc))
     .then(updated => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
-    .catch((error) => console.error('Failed to update ' + loc.id, error));
+    .catch(error => console.error('Failed to update ' + loc.id, error));
 }
 
 function updateChannelsTopicForLocation(loc) {
@@ -683,12 +764,12 @@ function updateChannelsTopicForLocation(loc) {
   if (!channels.size) {
     console.error('Could not find channels for location ' + loc.id);
   } else {
-    return channels.forEach((channel) => updateChannelTopic(loc, channel));
+    return channels.forEach(channel => updateChannelTopic(loc, channel));
   }
 }
 
 function updateChannelTopics() {
-  return ALL_LOCATIONS.forEach((loc) => {
+  return ALL_LOCATIONS.forEach(loc => {
     return updateChannelsTopicForLocation(loc);
   });
 }
@@ -705,11 +786,11 @@ client.on('message', message => {
 
     if (isAdmin && cmd === 'yeet') {
       // TODO: Only reportTodaysPlayers to the server that the message came from.
-      return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
+      return ALL_LOCATIONS.forEach(loc => reportTodaysPlayers(loc));
     }
 
     const channel = message.channel;
-    const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
+    const shop = ALL_LOCATIONS.find(shop => shop.id === channel.name);
 
     if (!shop) {
       console.error('Could not find shop with id ' + channel.name);
@@ -728,11 +809,13 @@ client.on('message', message => {
           cab,
           cabIndex,
           shop,
-        }).then(() => {
-          channel.send('Added');
-        }).catch((err) => {
-          console.error('Failed to add cab', err);
-        });
+        })
+          .then(() => {
+            channel.send('Added');
+          })
+          .catch(err => {
+            console.error('Failed to add cab', err);
+          });
       } else if (cmd === 'removecab') {
         const cabIndex = args[1];
         console.log('before remove', shop.cabs.map(cab => cab.cookieValue));
@@ -755,12 +838,12 @@ client.on('message', message => {
         if (shop.eventMode) {
           channel.send('Dancer names will now be revealed automatically.');
         } else {
-          channel.send('Dancer-name-reveal behavior is now back to default.')
+          channel.send('Dancer-name-reveal behavior is now back to default.');
         }
       }
     } else if (cmd === 'here') {
       const recentPlayers = getRecentPlayers(shop);
-      const response = summaryHereString(shop, {includeList: false}) + monospace(recentPlayers.join('\n'));
+      const response = summaryHereString(shop, { includeList: false }) + monospace(recentPlayers.join('\n'));
       console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
       channel.send(response);
     } else if (cmd === 'whose') {
@@ -771,12 +854,14 @@ client.on('message', message => {
 
 // Initialize locations
 const CONFIG_LOCATIONS = config.get('shops') || [];
-const ALL_LOCATIONS = CONFIG_LOCATIONS.map((shop) => {
+const ALL_LOCATIONS = CONFIG_LOCATIONS.map(shop => {
   return new Location({
     name: shop.id,
     id: shop.id,
     timeZone: shop.timeZone,
-    cabs: shop.cookies.map((cookie) => {return new Cab(cookie);}),
+    cabs: shop.cookies.map(cookie => {
+      return new Cab(cookie);
+    }),
     eventMode: shop.eventMode,
   });
 });
@@ -786,28 +871,30 @@ function getAllInitialData() {
 
   const promises = ALL_LOCATIONS.map(loc => {
     return Promise.all(getInitialData(loc))
-    .catch(err => {
-      console.error(getUrl(), 'failed,', err, 'retrying', loc.id, getUrl());
-      return Promise.all(getInitialData(loc))
+      .catch(err => {
+        console.error(getUrl(), 'failed,', err, 'retrying', loc.id, getUrl());
+        return Promise.all(getInitialData(loc))
+          .then(() => {
+            updateChannelsTopicForLocation(loc);
+          })
+          .catch(err => {
+            const errorMessage = `Damn we failed on the retry, too. ${loc.id}`;
+            console.error(errorMessage);
+            throw new Error(errorMessage);
+          });
+      })
       .then(() => {
         updateChannelsTopicForLocation(loc);
-      })
-      .catch(err => {
-        const errorMessage = `Damn we failed on the retry, too. ${loc.id}`;
-        console.error(errorMessage);
-        throw new Error(errorMessage);
       });
-    })
-    .then(() => {
-      updateChannelsTopicForLocation(loc);
-    });
   });
-  return Promise.all(promises)
-  // We would use .finally() if it existed, but .then() is fine since we'll exit on an error anyways.
-  .then(() => {
-    console.log('getAllInitialData complete, starting update loop');
-    setTimeout(update, REFRESH_INTERVAL);
-  });
+  return (
+    Promise.all(promises)
+      // We would use .finally() if it existed, but .then() is fine since we'll exit on an error anyways.
+      .then(() => {
+        console.log('getAllInitialData complete, starting update loop');
+        setTimeout(update, REFRESH_INTERVAL);
+      })
+  );
 }
 
 const DISCORD_BOT_TOKEN = config.get('discordBotToken');
@@ -815,9 +902,10 @@ if (!DISCORD_BOT_TOKEN) {
   console.error('Missing discordBotToken config key.');
   process.exit();
 }
-client.login(DISCORD_BOT_TOKEN)
+client
+  .login(DISCORD_BOT_TOKEN)
   .then(getAllInitialData)
-  .catch((err) => {
+  .catch(err => {
     console.error('--> Failed to get initial data. Restart the bot.');
     process.exit();
     throw err;
