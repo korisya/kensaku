@@ -64,6 +64,8 @@ function Player(args) {
 function playerIsVisible(player, shop) {
   if (showAllNames) {
     return true;
+  } else if (player.name.indexOf('TFTI') > -1 || player.name.indexOf('PRIM') > -1) {
+    return true;
   } else if (hiddenPlayers.includes(player.ddrCode)) {
     return false;
   } else {
