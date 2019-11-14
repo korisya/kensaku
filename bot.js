@@ -40,7 +40,7 @@ function timeDifferential(nowTime, beforeTime) {
 function timeString(time, timeZone) {
   return time.toLocaleTimeString([], {
     hour12: true,
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
     timeZone: timeZone,
   });
