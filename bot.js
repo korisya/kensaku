@@ -61,12 +61,16 @@ function Player(args) {
   };
 }
 
+function playerIsHidden(player) {
+  return hiddenPlayers.includes(player.ddrCode);
+}
+
 function playerIsVisible(player, shop) {
   if (showAllNames) {
     return true;
   } else if (player.name.indexOf('TFTI') > -1 || player.name.indexOf('PRIM') > -1) {
     return true;
-  } else if (hiddenPlayers.includes(player.ddrCode)) {
+  } else if (playerIsHidden(player)) {
     return false;
   } else {
     return (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
@@ -154,7 +158,8 @@ function getRecentPlayers(shop) {
   shop.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
-      if (playerIsVisible(player, shop)) {
+      if (playerIsHidden(player)) {
+      } else if (playerIsVisible(player, shop)) {
         playerStrings.push(`${player.name.padEnd(8)} ${player.ddrCode} Seen ${timeSinceSeen.minOnly}m ago`);
       } else {
         playerStrings.push(`******** ******** Seen ${timeSinceSeen.minOnly}m ago`);
@@ -172,7 +177,8 @@ function getTodaysPlayers(shop) {
     const firstTime = timeString(player.firstTime, player.loc.timeZone);
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
-    if (playerIsVisible(player, shop)) {
+    if (playerIsHidden(player)) {
+    } else if (playerIsVisible(player, shop)) {
       playerStrings.push(`${player.name.padEnd(8)} ${player.ddrCode} (${timePlayed.str})`);
     } else {
       playerStrings.push(`******** ******** (${timePlayed.str})`);
@@ -199,7 +205,8 @@ function tftiCheck(incomingPlayer, locationId) {
 }
 
 function reportNewPlayer(loc, incomingPlayer) {
-  if (playerIsVisible(incomingPlayer, loc)) {
+  if (playerIsHidden(incomingPlayer)) {
+  } else if (playerIsVisible(incomingPlayer, loc)) {
     pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name.padEnd(8)} ${incomingPlayer.ddrCode}`));
   } else {
     pingChannelsForLocation(loc, monospace('+ ******** ********'));
@@ -212,7 +219,8 @@ function reportNewPlayers(loc, players) {
   let playersToReport = [];
 
   players.forEach(player => {
-    if (playerIsVisible(player, loc)) {
+    if (playerIsHidden(player)) {
+    } else if (playerIsVisible(player, loc)) {
       playersToReport.push(`+ ${player.name.padEnd(8)} ${player.ddrCode}`);
     } else {
       playersToReport.push('+ ******** ********');
@@ -719,7 +727,8 @@ function summaryHereString(loc, { includeList = true } = {}) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       numActivePlayers++;
-      if (playerIsVisible(player, loc)) {
+      if (playerIsHidden(player)) {
+      } else if (playerIsVisible(player, loc)) {
         playerNamesTimes.push(`${player.name} ${timeSinceSeen.minOnly}m`);
       } else {
         playerNamesTimes.push(`${timeSinceSeen.minOnly}m`);
@@ -736,7 +745,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
       loc.todaysPlayers.length === 1 ? "Today's only player has" : `All ${loc.todaysPlayers.length} players today have`;
     const timeSinceSeen = timeDifferential(currentTime, loc.todaysPlayers[0].lastTime);
     summaryHereString = `${nowString}: ${players} left! :eyes:`;
-    if (playerIsVisible(loc.todaysPlayers[0], loc)) {
+    if (!playerIsHidden(loc.todaysPlayers[0]) && playerIsVisible(loc.todaysPlayers[0], loc)) {
       summaryHereString += ` Last player seen: ${loc.todaysPlayers[0].name} ${timeSinceSeen.str} ago.`;
     }
   } else {
