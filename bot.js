@@ -89,13 +89,7 @@ function isExtendedMaintenanceTime() {
 
 // Determine which URL to hit
 function getUrl() {
-  if (isDailyMaintenanceTime()) {
-    // For some reason, on US accounts, this URL works during daily maintenance
-    return 'https://p.eagate.573.jp/game/ddr/ddra/p/rival/kensaku.html?mode=4';
-  } else {
-    // This page is faster and more reliable, but goes down during daily maintenance
-    return 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
-  }
+  return 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
 }
 
 // Constructor for cabs
