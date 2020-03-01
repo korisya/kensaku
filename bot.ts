@@ -1,23 +1,29 @@
-const Discord = require('discord.js');
-const RequestPromise = require('request-promise');
-const tough = require('tough-cookie');
-const cheerio = require('cheerio');
-const config = require('config');
+// TODO: Fix type errors. These have been stable in run-time for a while.
+// @ts-nocheck
 
-const adminDiscordTags = config.get('adminDiscordTags');
-const REFRESH_INTERVAL = config.get('refreshIntervalMs');
-const showAllNames = config.get('showAllNames');
+import Discord from 'discord.js';
+import RequestPromise from 'request-promise';
+import tough, { Cookie } from 'tough-cookie';
+import cheerio from 'cheerio';
+import config from 'config';
+import { CookieJar } from 'request';
+
+const adminDiscordTags: Array<string> = config.get('adminDiscordTags');
+const REFRESH_INTERVAL: number = config.get('refreshIntervalMs');
+const showAllNames: boolean = config.get('showAllNames');
 
 // Report time in UTC (GMT+0)
 const usReportTime = 12;
 const jpReportTime = 20;
 
 // Special players who will get extra-exposed when they show up
-const tftiPlayers = config.get('tftiPlayers');
+const tftiPlayers: Array<string> = config.get('tftiPlayers');
 
-// Using object spread to clone the .get() array so that we can push new players in
-const hiddenPlayers = [...config.get('hiddenPlayers')]; // Hidden players who never be shown, regardless of mode
-const visiblePlayers = [...config.get('visiblePlayers')]; // Visible players who will get revealed when they show up
+// Using object spread to clone the .get() array so that we can push new players in without restarting/reloading config
+const configHiddenPlayers: Array<string> = config.get('hiddenPlayers'); // Hidden players who never be shown, regardless of mode
+const hiddenPlayers = [...configHiddenPlayers];
+const configVisiblePlayers: Array<string> = config.get('visiblePlayers'); // Visible players who will get revealed when they show up
+const visiblePlayers = [...configVisiblePlayers];
 
 //const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
 //const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
@@ -26,10 +32,12 @@ const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Tracking
 const msMinute = 60 * 1000;
 const msHour = 60 * 60 * 1000;
 const RECENT_PLAYER_CUTOFF_MINUTES = 90;
-function timeDifferential(nowTime, beforeTime) {
-  const hr = Math.floor((nowTime - beforeTime) / msHour);
-  const min = Math.floor(((nowTime - beforeTime) % msHour) / msMinute);
-  const minOnly = Math.floor((nowTime - beforeTime) / msMinute);
+function timeDifferential(nowTime: Date, beforeTime: Date) {
+  const nowTimeMs = nowTime.getTime();
+  const beforeTimeMs = beforeTime.getTime();
+  const hr = Math.floor((nowTimeMs - beforeTimeMs) / msHour);
+  const min = Math.floor(((nowTimeMs - beforeTimeMs) % msHour) / msMinute);
+  const minOnly = Math.floor((nowTimeMs - beforeTimeMs) / msMinute);
   return {
     h: hr,
     m: min,
@@ -37,7 +45,7 @@ function timeDifferential(nowTime, beforeTime) {
     str: `${hr}h ${min}m`,
   };
 }
-function timeString(time, timeZone) {
+function timeString(time: Date, timeZone: string) {
   return time.toLocaleTimeString([], {
     hour12: true,
     hour: 'numeric',
@@ -47,7 +55,15 @@ function timeString(time, timeZone) {
 }
 
 // Constructor for Players
-function Player(args) {
+type Player = {
+  dancerName: string;
+  ddrCode: string;
+  loc: any;
+  firstTime: Date;
+  lastTime: Date;
+  toLocaleString: () => string;
+};
+function Player(args: Player) {
   this.name = args.dancerName;
   this.ddrCode = args.ddrCode;
   this.loc = args.loc;
@@ -61,11 +77,11 @@ function Player(args) {
   };
 }
 
-function playerIsHidden(player) {
+function playerIsHidden(player: Player) {
   return hiddenPlayers.includes(player.ddrCode);
 }
 
-function playerIsVisible(player, shop) {
+function playerIsVisible(player: Player, shop: Shop) {
   if (showAllNames) {
     return true;
   } else if (player.name.indexOf('TFTI') > -1 || player.name.indexOf('PRIM') > -1) {
@@ -84,6 +100,7 @@ function isDailyMaintenanceTime() {
 }
 
 function isExtendedMaintenanceTime() {
+  // TODO: 3rd Tuesday of the month, 2am-7am Japan time
   return false;
 }
 
@@ -93,7 +110,15 @@ function getUrl() {
 }
 
 // Constructor for cabs
-function Cab(cookieValue) {
+type Cab = {
+  players: Array<Player>;
+  newPlayers: Array<Player>;
+  cookieValue: string;
+  cookie: Cookie;
+  cookiejar: CookieJar;
+  prunedPlayers: number;
+};
+function Cab(cookieValue: string) {
   this.players = [];
   this.newPlayers = [];
   this.cookieValue = cookieValue;
@@ -108,8 +133,19 @@ function Cab(cookieValue) {
   this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
   this.prunedPlayers = 0;
 }
+
 // Constructor for locations
-function Location(loc) {
+type Shop = {
+  name: string; // Friendly name
+  id: string; // Channel name
+  cabs: Array<Cab>;
+  timeZone: string;
+  todaysPlayers: Array<Player>;
+  numPlayersEachHour: Array<number>;
+  alreadyReported: boolean;
+  eventMode: boolean;
+};
+function Location(loc: Shop) {
   this.name = loc.name;
   this.id = loc.id;
   this.cabs = loc.cabs;
@@ -145,9 +181,9 @@ function Location(loc) {
   this.eventMode = loc.eventMode || false;
 }
 
-function getRecentPlayers(shop) {
+function getRecentPlayers(shop: Shop) {
   const currentTime = new Date();
-  const playerStrings = [];
+  const playerStrings: Array<string> = [];
   // TODO: Use a reduce function
   shop.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
@@ -181,7 +217,7 @@ function getTodaysPlayers(shop) {
   return playerStrings;
 }
 
-function tftiCheck(incomingPlayer, locationId) {
+function tftiCheck(incomingPlayer: Player, locationId: string) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
     getChannelsWithName('tfti').map(tftiChannel => {
       const locationIdChannel = tftiChannel.guild.channels.find(c => c.name === locationId);
@@ -261,7 +297,7 @@ function getInitialDataForCab({ cab, cabIndex, shop }) {
 
     console.log(`getInitialData ${shop.id} @cab${cabIndex} found ${dancerRows} dancers:`);
     // Parses data
-    for (var dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) {
+    for (let dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) {
       // Get up to 7 dancers, but don't break if we have less than 20
       cab.players[dancerIndex] = new Player({
         dancerName: $('td.dancer_name')
@@ -281,8 +317,8 @@ function getInitialDataForCab({ cab, cabIndex, shop }) {
 
 // Retrieves new data
 // Ideally this should be done in update() instead
-function retrieveData(loc) {
-  var now = new Date();
+function retrieveData(loc: Shop) {
+  const now = new Date();
 
   const isAmerica = loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1;
 
@@ -360,7 +396,7 @@ function retrieveData(loc) {
         throw new Error(errorMessage);
       } else {
         const receivedPlayers = [];
-        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) {
+        for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) {
           // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
           const dancerName = $('td.dancer_name')
             .eq(dancerIndex)
@@ -381,7 +417,7 @@ function retrieveData(loc) {
         console.log(`--> ${loc.name} @cab${cabIndex}: Data received >` + receivedPlayers.toLocaleString());
 
         // Until we fix some logic, only put top 2 into loc.cabs.newPlayers
-        for (dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) {
+        for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) {
           loc.cabs[cabIndex].newPlayers[dancerIndex] = receivedPlayers[dancerIndex];
         }
       }
@@ -390,7 +426,7 @@ function retrieveData(loc) {
 }
 
 // Updates player lists using new data
-function updatePlayerList(loc) {
+function updatePlayerList(loc: Shop) {
   loc.cabs.forEach(function(cab, cabIndex) {
     if (!cab.players.length) {
       return;
@@ -538,7 +574,7 @@ function pruneData() {
         loc2.cabs.forEach(function(cab2) {
           if (cab1 !== cab2) {
             cab1.newPlayers.forEach(function(newPlayer) {
-              var foundPlayer = cab2.players.find(function(player) {
+              let foundPlayer = cab2.players.find(function(player) {
                 return player.ddrCode === newPlayer.ddrCode;
               });
               if (foundPlayer) {
@@ -560,13 +596,7 @@ function update() {
   const locationPromises = ALL_LOCATIONS.map(loc => {
     const cabPromises = retrieveData(loc);
     return Promise.all(cabPromises).catch(err => {
-      console.error(err, `${getUrl()} failed, retrying ${loc.id} with URL ${getUrl()}`);
-      return Promise.all(retrieveData(loc)).catch(err => {
-        const errorMessage =
-          '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Damn we failed on the retry, too @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@';
-        console.error(errorMessage);
-        throw new Error(errorMessage);
-      });
+      console.error(err, `${getUrl()} failed`);
     });
   });
 
@@ -579,6 +609,7 @@ function update() {
     })
     .then(() => {
       pruneData();
+      // TODO: Update channel topic only on player list success per location.
       updatePlayerLists();
       updateChannelTopics();
       console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
@@ -587,7 +618,7 @@ function update() {
 }
 
 // Initialize Discord Bot
-var client = new Discord.Client();
+const client = new Discord.Client();
 
 client.on('ready', () => {
   console.log('Connected');
@@ -652,13 +683,13 @@ function reportTodaysPlayersForChannel(channel, loc) {
   }
 
   if (todaysPlayers.length && loc.numPlayersEachHour.some(element => element > 0)) {
-    var reportTime = new Date();
+    const reportTime = new Date();
     if (loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1) {
       reportTime.setUTCHours(usReportTime);
     } else {
       reportTime.setUTCHours(jpReportTime);
     }
-    var localReportTime = new Date(reportTime.toLocaleString('en-US', { timeZone: loc.timeZone }));
+    const localReportTime = new Date(reportTime.toLocaleString('en-US', { timeZone: loc.timeZone }));
 
     const graphStrings = ['...'];
 
@@ -715,7 +746,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
   const nowString = timeString(currentTime, loc.timeZone);
 
   let numActivePlayers = 0;
-  const playerNamesTimes = [];
+  const playerNamesTimes: string[] = [];
 
   loc.todaysPlayers.forEach(function(player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
@@ -830,9 +861,15 @@ client.on('message', message => {
           });
       } else if (cmd === 'removecab') {
         const cabIndex = args[1];
-        console.log('before remove', shop.cabs.map(cab => cab.cookieValue));
+        console.log(
+          'before remove',
+          shop.cabs.map(cab => cab.cookieValue)
+        );
         shop.cabs.splice(cabIndex, 1);
-        console.log('after remove', shop.cabs.map(cab => cab.cookieValue));
+        console.log(
+          'after remove',
+          shop.cabs.map(cab => cab.cookieValue)
+        );
         channel.send('Removed');
       } else if (cmd === 'addvisibleplayer') {
         const ddrCode = args[1];
@@ -858,8 +895,8 @@ client.on('message', message => {
 });
 
 // Initialize locations
-const CONFIG_LOCATIONS = config.get('shops') || [];
-const ALL_LOCATIONS = CONFIG_LOCATIONS.map(shop => {
+const CONFIG_LOCATIONS: Array<Shop> = config.get('shops') || [];
+const ALL_LOCATIONS: Array<Shop> = CONFIG_LOCATIONS.map(shop => {
   return new Location({
     name: shop.id,
     id: shop.id,
@@ -902,7 +939,7 @@ function getAllInitialData() {
   );
 }
 
-const DISCORD_BOT_TOKEN = config.get('discordBotToken');
+const DISCORD_BOT_TOKEN: string = config.get('discordBotToken');
 if (!DISCORD_BOT_TOKEN) {
   console.error('Missing discordBotToken config key.');
   process.exit();

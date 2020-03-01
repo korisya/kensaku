@@ -1,18 +1,23 @@
 {
   "name": "kensaku-bot",
-  "version": "0.7.0",
-  "description": "A DDR A machine-stalking bot.",
-  "main": "bot.js",
+  "version": "0.8.0",
+  "description": "A DDR machine-tracking Discord bot.",
+  "main": "bot.ts",
   "scripts": {
-    "start": "node bot.js"
+    "start": "ts-node bot.ts"
   },
   "author": "t3a",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.2",
-    "config": "^3.0.1",
-    "discord.js": "^11.4.2",
-    "request": "^2.88.0",
-    "request-promise": "^4.2.2",
-    "tough-cookie": "^2.4.3"
+    "@types/cheerio": "^0.22.16",
+    "@types/config": "0.0.36",
+    "@types/request-promise": "^4.1.45",
+    "cheerio": "^1.0.0-rc.3",
+    "config": "^3.3.0",
+    "discord.js": "^11.6.1",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5",
+    "tough-cookie": "^2.5.0",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.8.3"
   }
 }
