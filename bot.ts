@@ -821,18 +821,20 @@ client.on('message', message => {
     const cmd = args[0].substring(1);
     console.info('Command ' + cmd + ' received from ' + message.author.tag);
 
+    const channel = message.channel;
+
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
     if (isAdmin) {
       if (cmd === 'yeet') {
         // TODO: Only reportTodaysPlayers to the server that the message came from.
         return ALL_LOCATIONS.forEach(loc => reportTodaysPlayers(loc));
-      } else if (cmd === 'yeeet') {
+      } else if (cmd === 'revealEverywhere') {
+        channel.send('Dancer names will be revealed automatically for the rest of the day.');
         return ALL_LOCATIONS.forEach(loc => (loc.eventMode = true));
       }
     }
 
-    const channel = message.channel;
     const shop = ALL_LOCATIONS.find(shop => shop.id === channel.name);
 
     if (!shop) {
@@ -891,7 +893,7 @@ client.on('message', message => {
         channel.send('Removed');
       } else if (cmd === 'reveal') {
         shop.eventMode = true;
-        channel.send('Dancer names will now be revealed automatically.');
+        channel.send('Dancer names will be revealed automatically for the rest of the day.');
       } else if (cmd === 'refresh') {
         if (updateTimeoutId) {
           clearTimeout(updateTimeoutId);
