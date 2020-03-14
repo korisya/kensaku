@@ -9,6 +9,7 @@ import config from 'config';
 import { CookieJar } from 'request';
 
 const adminDiscordTags: Array<string> = config.get('adminDiscordTags');
+const adminPlayers: Array<string> = config.get('adminPlayers');
 const REFRESH_INTERVAL: number = config.get('refreshIntervalMs');
 const showAllNames: boolean = config.get('showAllNames');
 
@@ -89,7 +90,11 @@ function playerIsVisible(player: Player, shop: Shop) {
   } else if (playerIsHidden(player)) {
     return false;
   } else {
-    return (shop && shop.eventMode) || visiblePlayers.includes(player.ddrCode);
+    return (
+      shop?.eventMode ||
+      shop?.todaysPlayers.map(p => p.ddrCode).some(shopDdrCodes => shopDdrCodes.includes(adminPlayers)) ||
+      visiblePlayers.includes(player.ddrCode)
+    );
   }
 }
 
@@ -181,7 +186,7 @@ function Location(loc: Shop) {
   this.eventMode = loc.eventMode || false;
 }
 
-function getRecentPlayers(shop: Shop) {
+function getRecentPlayers(shop: Shop): Array<string> {
   const currentTime = new Date();
   const playerStrings: Array<string> = [];
   // TODO: Use a reduce function
