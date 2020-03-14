@@ -816,9 +816,13 @@ client.on('message', message => {
 
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
-    if (isAdmin && cmd === 'yeet') {
-      // TODO: Only reportTodaysPlayers to the server that the message came from.
-      return ALL_LOCATIONS.forEach(loc => reportTodaysPlayers(loc));
+    if (isAdmin) {
+      if (cmd === 'yeet') {
+        // TODO: Only reportTodaysPlayers to the server that the message came from.
+        return ALL_LOCATIONS.forEach(loc => reportTodaysPlayers(loc));
+      } else if (cmd === 'yeeet') {
+        return ALL_LOCATIONS.forEach(loc => (loc.eventMode = true));
+      }
     }
 
     const channel = message.channel;
