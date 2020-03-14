@@ -882,13 +882,9 @@ client.on('message', message => {
           visiblePlayers.splice(index, 1);
         }
         channel.send('Removed');
-      } else if (cmd === 'eventmode') {
-        shop.eventMode = !shop.eventMode;
-        if (shop.eventMode) {
-          channel.send('Dancer names will now be revealed automatically.');
-        } else {
-          channel.send('Dancer-name-reveal behavior is now back to default.');
-        }
+      } else if (cmd === 'reveal') {
+        shop.eventMode = true;
+        channel.send('Dancer names will now be revealed automatically.');
       }
     }
   }
