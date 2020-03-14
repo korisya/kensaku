@@ -8,6 +8,8 @@ import cheerio from 'cheerio';
 import config from 'config';
 import { CookieJar } from 'request';
 
+let updateTimeoutId: NodeJS.Timeout;
+
 const adminDiscordTags: Array<string> = config.get('adminDiscordTags');
 const adminPlayers: Array<string> = config.get('adminPlayers');
 const REFRESH_INTERVAL: number = config.get('refreshIntervalMs');
@@ -614,7 +616,7 @@ function update() {
       updatePlayerLists();
       updateChannelTopics();
       console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
-      setTimeout(update, REFRESH_INTERVAL);
+      updateTimeoutId = setTimeout(update, REFRESH_INTERVAL);
     });
 }
 
@@ -890,6 +892,11 @@ client.on('message', message => {
       } else if (cmd === 'reveal') {
         shop.eventMode = true;
         channel.send('Dancer names will now be revealed automatically.');
+      } else if (cmd === 'refresh') {
+        if (updateTimeoutId) {
+          clearTimeout(updateTimeoutId);
+        }
+        update();
       }
     }
   }
@@ -935,7 +942,7 @@ function getAllInitialData() {
       // We would use .finally() if it existed, but .then() is fine since we'll exit on an error anyways.
       .then(() => {
         console.log('getAllInitialData complete, starting update loop');
-        setTimeout(update, REFRESH_INTERVAL);
+        updateTimeoutId = setTimeout(update, REFRESH_INTERVAL);
       })
   );
 }
