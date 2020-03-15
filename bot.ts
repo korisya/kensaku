@@ -604,12 +604,6 @@ function update() {
   });
 
   Promise.all(locationPromises)
-    .catch(err => {
-      console.log(err);
-      console.log(
-        '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n--> Error detected in at least 1 cab. \n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n'
-      );
-    })
     .then(() => {
       pruneData();
       // TODO: Update channel topic only on player list success per location.
@@ -617,6 +611,10 @@ function update() {
       updateChannelTopics();
       console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
       updateTimeoutId = setTimeout(update, REFRESH_INTERVAL);
+    })
+    .catch(err => {
+      console.log(err);
+      console.log('\n@@@@@\n--> Error detected in at least 1 cab. \n@@@@@\n');
     });
 }
 
