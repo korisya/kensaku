@@ -390,6 +390,11 @@ function retrieveData(loc: Shop) {
     loc.eventMode = false; // By default, turn off event mode at the end of the day, even if events last multiple days.
   }
 
+  if (isDailyMaintenanceTime() || isExtendedMaintenanceTime()) {
+    console.log('Not checking during daily maintenance.');
+    return [];
+  }
+
   console.log('--> ' + loc.name + ': Retrieving data...');
   return loc.cabs.map((cab, cabIndex) => {
     return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then(body => {
@@ -603,12 +608,14 @@ function update() {
     });
   });
 
-  Promise.all(locationPromises)
+  return Promise.all(locationPromises)
     .then(() => {
-      pruneData();
-      // TODO: Update channel topic only on player list success per location.
-      updatePlayerLists();
-      updateChannelTopics();
+      if (!(isDailyMaintenanceTime() || isExtendedMaintenanceTime())) {
+        pruneData();
+        // TODO: Update channel topic only on player list success per location.
+        updatePlayerLists();
+        updateChannelTopics();
+      }
       console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
       updateTimeoutId = setTimeout(update, REFRESH_INTERVAL);
     })
