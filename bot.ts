@@ -845,6 +845,12 @@ client.on('message', message => {
       const response = summaryHereString(shop, { includeList: false }) + monospace(recentPlayers.join('\n'));
       console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${response}`);
       channel.send(response);
+
+      // Also force a !refresh (afterwards)
+      if (updateTimeoutId) {
+        clearTimeout(updateTimeoutId);
+      }
+      update();
     } else if (cmd === 'whose') {
       channel.send('joe mamma... hoes mad');
     } else if (isAdmin) {
@@ -892,11 +898,15 @@ client.on('message', message => {
       } else if (cmd === 'reveal') {
         shop.eventMode = true;
         channel.send('Dancer names will be revealed automatically for the rest of the day.');
-      } else if (cmd === 'refresh') {
+      } else if (cmd === 'refresh' || cmd === 'resume') {
         if (updateTimeoutId) {
           clearTimeout(updateTimeoutId);
         }
         update();
+      } else if (cmd === 'pause') {
+        if (updateTimeoutId) {
+          clearTimeout(updateTimeoutId);
+        }
       }
     }
   }
