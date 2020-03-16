@@ -837,6 +837,9 @@ client.on('message', message => {
       } else if (cmd === 'revealEverywhere') {
         channel.send('Dancer names will be revealed automatically for the rest of the day.');
         return ALL_LOCATIONS.forEach(loc => (loc.eventMode = true));
+      } else if (cmd === 'hideEverywhere') {
+        channel.send('Dancer-name-reveal behavior is now back to default.');
+        return ALL_LOCATIONS.forEach(loc => (loc.eventMode = false));
       }
     }
 
