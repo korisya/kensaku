@@ -1,10 +1,8 @@
-// TODO: Fix type errors. These have been stable in run-time for a while.
-// @ts-nocheck
-
-import { Client } from 'discord.js';
+import * as Discord from 'discord.js';
 import * as RequestPromise from 'request-promise';
-import { Cookie } from 'tough-cookie';
+import * as ToughCookie from 'tough-cookie';
 import * as cheerio from 'cheerio';
+// Don't use default import for config, it crashes on launch
 import * as config from 'config';
 import { CookieJar } from 'request';
 
@@ -28,8 +26,6 @@ const hiddenPlayers = [...configHiddenPlayers];
 const configVisiblePlayers: Array<string> = config.get('visiblePlayers'); // Visible players who will get revealed when they show up
 const visiblePlayers = [...configVisiblePlayers];
 
-//const tftiEmoji = '<:TFTI:483651827984760842>'; // ID from San Jose DDR Players
-//const tftiEmoji = '<:TFTI:537689355553079306>'; // ID from BotTester
 const tftiEmoji = '<:TFTI:542983258728693780>'; // ID from DDR Machine Tracking
 
 const msMinute = 60 * 1000;
@@ -57,25 +53,28 @@ function timeString(time: Date, timeZone: string) {
   });
 }
 
-// Constructor for Players
-type Player = {
+type IncomingPlayer = {
   dancerName: string;
+  ddrCode: string;
+  loc: any;
+};
+
+class Player {
+  name: string;
   ddrCode: string;
   loc: any;
   firstTime: Date;
   lastTime: Date;
-  toLocaleString: () => string;
-};
-function Player(args: Player) {
-  this.name = args.dancerName;
-  this.ddrCode = args.ddrCode;
-  this.loc = args.loc;
 
-  this.firstTime = new Date();
-  this.lastTime = new Date();
+  constructor(incomingPlayer: IncomingPlayer) {
+    this.name = incomingPlayer.dancerName;
+    this.ddrCode = incomingPlayer.ddrCode;
+    this.loc = incomingPlayer.loc;
+    this.firstTime = new Date();
+    this.lastTime = new Date();
+  }
 
-  // TODO: Fix constructing the same function repeatedly for every Player instance
-  this.toLocaleString = function () {
+  toLocaleString = () => {
     return this.name + ' ' + this.ddrCode;
   };
 }
@@ -94,7 +93,7 @@ function playerIsVisible(player: Player, shop: Shop) {
   } else {
     return (
       shop?.eventMode ||
-      shop?.todaysPlayers.map((p) => p.ddrCode).some((shopDdrCodes) => shopDdrCodes.includes(adminPlayers)) ||
+      shop?.todaysPlayers.map((p) => p.ddrCode).some((shopDdrCodes) => adminPlayers.includes(shopDdrCodes)) ||
       visiblePlayers.includes(player.ddrCode)
     );
   }
@@ -116,33 +115,40 @@ function getUrl() {
   return 'https://p.eagate.573.jp/game/ddr/ddra20/p/rival/kensaku.html?mode=4';
 }
 
-// Constructor for cabs
-type Cab = {
+class Cab {
   players: Array<Player>;
   newPlayers: Array<Player>;
   cookieValue: string;
-  cookie: Cookie;
+  cookie: ToughCookie.Cookie;
   cookiejar: CookieJar;
   prunedPlayers: number;
-};
-function Cab(cookieValue: string) {
-  this.players = [];
-  this.newPlayers = [];
-  this.cookieValue = cookieValue;
-  this.cookie = new Cookie({
-    key: 'M573SSID',
-    value: cookieValue,
-    domain: 'p.eagate.573.jp',
-    httpOnly: true,
-    maxAge: 31536000,
-  });
-  this.cookiejar = RequestPromise.jar();
-  this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
-  this.prunedPlayers = 0;
+
+  constructor(cookieValue: string) {
+    this.players = [];
+    this.newPlayers = [];
+    this.cookieValue = cookieValue;
+    this.cookie = new ToughCookie.Cookie({
+      key: 'M573SSID',
+      value: cookieValue,
+      domain: 'p.eagate.573.jp',
+      httpOnly: true,
+      maxAge: 31536000,
+    });
+    this.cookiejar = RequestPromise.jar();
+    this.prunedPlayers = 0;
+
+    this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
+  }
 }
 
-// Constructor for locations
-type Shop = {
+// Constructor for shops
+type ConfigShop = {
+  id: string;
+  timeZone: string;
+  cookies: Array<string>;
+  eventMode?: boolean;
+};
+class Shop {
   name: string; // Friendly name
   id: string; // Channel name
   cabs: Array<Cab>;
@@ -151,41 +157,42 @@ type Shop = {
   numPlayersEachHour: Array<number>;
   alreadyReported: boolean;
   eventMode: boolean;
-};
-function Location(loc: Shop) {
-  this.name = loc.name;
-  this.id = loc.id;
-  this.cabs = loc.cabs;
-  this.timeZone = loc.timeZone;
-  this.todaysPlayers = [];
-  this.numPlayersEachHour = [
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-  ];
-  this.alreadyReported = false; // If you start the bot during a report hour, the bot will immediately report an empty day.
-  this.eventMode = loc.eventMode || false;
+
+  constructor(configShop: ConfigShop) {
+    this.name = configShop.id;
+    this.id = configShop.id;
+    this.cabs = configShop.cookies.map((cookie) => new Cab(cookie));
+    this.timeZone = configShop.timeZone;
+    this.todaysPlayers = [];
+    this.numPlayersEachHour = [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+    ];
+    this.alreadyReported = false; // If you start the bot during a report hour, the bot will immediately report an empty day.
+    this.eventMode = configShop.eventMode || false;
+  }
 }
 
 function getRecentPlayers(shop: Shop): Array<string> {
@@ -206,11 +213,11 @@ function getRecentPlayers(shop: Shop): Array<string> {
   return playerStrings;
 }
 
-function getTodaysPlayers(shop) {
+function getTodaysPlayers(shop: Shop) {
   const currentTime = new Date();
-  const playerStrings = [];
+  const playerStrings: Array<string> = [];
   // TODO: Use a reduce function
-  shop.todaysPlayers.forEach(function (player) {
+  shop.todaysPlayers.forEach(function (player: Player) {
     const firstTime = timeString(player.firstTime, player.loc.timeZone);
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
@@ -241,7 +248,7 @@ function tftiCheck(incomingPlayer: Player, locationId: string) {
   }
 }
 
-function reportNewPlayer(loc, incomingPlayer) {
+function reportNewPlayer(loc: Shop, incomingPlayer: Player) {
   if (playerIsHidden(incomingPlayer)) {
   } else if (playerIsVisible(incomingPlayer, loc)) {
     pingChannelsForLocation(loc, monospace(`+ ${incomingPlayer.name.padEnd(8)} ${incomingPlayer.ddrCode}`));
@@ -252,8 +259,8 @@ function reportNewPlayer(loc, incomingPlayer) {
   console.log('\t> @' + loc.name + ': + ' + incomingPlayer.toLocaleString());
 }
 
-function reportNewPlayers(loc, players) {
-  let playersToReport = [];
+function reportNewPlayers(loc: Shop, players: Array<Player>) {
+  let playersToReport: Array<string> = [];
 
   players.forEach((player) => {
     if (playerIsHidden(player)) {
@@ -273,7 +280,7 @@ function reportNewPlayers(loc, players) {
 
 // Gets initial data
 // Ideally, we'd just retrieveData() or do whatever we do repeatedly (no special case and no duplicated code for the first run)
-function getInitialData(shop) {
+function getInitialData(shop: Shop) {
   console.log(`getInitialData ${shop.id}`);
   return shop.cabs.map((cab, cabIndex) => {
     return getInitialDataForCab({
@@ -284,8 +291,8 @@ function getInitialData(shop) {
   });
 }
 
-function getInitialDataForCab({ cab, cabIndex, shop }) {
-  return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then((body) => {
+function getInitialDataForCab({ cab, cabIndex, shop }: { cab: Cab; cabIndex: number; shop: Shop }) {
+  return RequestPromise.get({ jar: cab.cookiejar, uri: getUrl() }).then((body: string) => {
     const $ = cheerio.load(body);
     const dancerRows = $('td.dancer_name').get().length;
     if (dancerRows === 0) {
@@ -393,7 +400,7 @@ function retrieveData(loc: Shop) {
 
   console.log('--> ' + loc.name + ': Retrieving data...');
   return loc.cabs.map((cab, cabIndex) => {
-    return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then((body) => {
+    return RequestPromise.get({ jar: cab.cookiejar, uri: getUrl() }).then((body: string) => {
       const $ = cheerio.load(body);
       const dancerCount = $('td.dancer_name').length;
       if (dancerCount === 0) {
@@ -618,7 +625,7 @@ function update() {
 }
 
 // Initialize Discord Bot
-const client = new Client();
+const client = new Discord.Client();
 
 client.on('ready', () => {
   console.log('Connected');
@@ -628,20 +635,25 @@ client.on('ready', () => {
 
 // Reused in a few places
 // Plus we have the same channel name on multiple guilds
-function getChannelsWithName(name) {
-  return client.channels.filter((channel) => channel.name === name);
+function getChannelsWithName(name: string): Discord.Collection<string, Discord.TextChannel> {
+  // Discord types aren't smart about checking type here, so cast to TextChannel after we've already checked for 'text'
+  const textChannels: Discord.Collection<string, Discord.TextChannel> = client.channels.filter(
+    (channel) => channel.type === 'text'
+  ) as Discord.Collection<string, Discord.TextChannel>;
+
+  return textChannels.filter((channel) => channel.name === name);
 }
 
-function monospace(message) {
+function monospace(message: string) {
   return '```' + (message || ' ') + '```';
 }
 
-function pingChannel(channel, message) {
+function pingChannel(channel: Discord.TextChannel, message: string) {
   console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
   channel.send(message);
 }
 
-function pingChannelsForLocation(loc, message) {
+function pingChannelsForLocation(loc: Shop, message: string) {
   console.info('pingChannel ' + loc.id + ': ' + message);
   const channels = getChannelsWithName(loc.id);
   if (!channels.size) {
@@ -650,12 +662,12 @@ function pingChannelsForLocation(loc, message) {
     channels.forEach((channel) => pingChannel(channel, message));
   }
 }
-function reportTodaysPlayers(loc) {
+function reportTodaysPlayers(loc: Shop) {
   getChannelsWithName(loc.id).forEach((channel) => reportTodaysPlayersForChannel(channel, loc));
 }
 
 // https://medium.com/@Dragonza/four-ways-to-chunk-an-array-e19c889eac4
-function chunk(array, size) {
+function chunk(array: Array<string>, size: number) {
   const chunked_arr = [];
   let index = 0;
   while (index < array.length) {
@@ -665,7 +677,7 @@ function chunk(array, size) {
   return chunked_arr;
 }
 
-function reportTodaysPlayersForChannel(channel, loc) {
+function reportTodaysPlayersForChannel(channel: Discord.TextChannel, loc: Shop) {
   const todaysPlayers = getTodaysPlayers(loc);
   const today = todaysPlayers.length === 0 ? 'today.' : 'today:';
   const s = todaysPlayers.length === 1 ? '' : 's';
@@ -741,7 +753,7 @@ function reportTodaysPlayersForChannel(channel, loc) {
   }
 }
 
-function summaryHereString(loc, { includeList = true } = {}) {
+function summaryHereString(loc: Shop, { includeList = true } = {}) {
   const currentTime = new Date();
   const nowString = timeString(currentTime, loc.timeZone);
 
@@ -788,19 +800,24 @@ function summaryHereString(loc, { includeList = true } = {}) {
   return summaryHereString;
 }
 
-function updateChannelTopic(loc, channel) {
+function updateChannelTopic(loc: Shop, channel: Discord.TextChannel): Promise<void> {
   return channel
     .setTopic(summaryHereString(loc))
-    .then((updated) => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
+    .then((guildChannel) => {
+      // We know this is a text channel
+      const textChannel = guildChannel as Discord.TextChannel;
+      console.log(`Updated topic in ${textChannel.guild.name}/#${loc.id}: ${textChannel.topic}`);
+    })
     .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
-function updateChannelsTopicForLocation(loc) {
+function updateChannelsTopicForLocation(loc: Shop): Array<Promise<void>> {
   const channels = getChannelsWithName(loc.id);
   if (!channels.size) {
     console.error('Could not find channels for location ' + loc.id);
+    return [];
   } else {
-    return channels.forEach((channel) => updateChannelTopic(loc, channel));
+    return channels.map((channel) => updateChannelTopic(loc, channel));
   }
 }
 
@@ -818,7 +835,8 @@ client.on('message', (message) => {
     const cmd = args[0].substring(1);
     console.info('Command ' + cmd + ' received from ' + message.author.tag);
 
-    const channel = message.channel;
+    // We know this is a text channel
+    const channel: Discord.TextChannel = message.channel as Discord.TextChannel;
 
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
@@ -875,7 +893,7 @@ client.on('message', (message) => {
             console.error('Failed to add cab', err);
           });
       } else if (cmd === 'removecab') {
-        const cabIndex = args[1];
+        const cabIndex = parseInt(args[1]);
         console.log(
           'before remove',
           shop.cabs.map((cab) => cab.cookieValue)
@@ -915,18 +933,8 @@ client.on('message', (message) => {
 });
 
 // Initialize locations
-const CONFIG_LOCATIONS: Array<Shop> = config.get('shops') || [];
-const ALL_LOCATIONS: Array<Shop> = CONFIG_LOCATIONS.map((shop) => {
-  return new Location({
-    name: shop.id,
-    id: shop.id,
-    timeZone: shop.timeZone,
-    cabs: shop.cookies.map((cookie) => {
-      return new Cab(cookie);
-    }),
-    eventMode: shop.eventMode,
-  });
-});
+const CONFIG_LOCATIONS: Array<ConfigShop> = config.get('shops') || [];
+const ALL_LOCATIONS: Array<Shop> = CONFIG_LOCATIONS.map((configShop) => new Shop(configShop));
 
 function getAllInitialData() {
   console.log('getAllInitialData');
