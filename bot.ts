@@ -1,11 +1,11 @@
 // TODO: Fix type errors. These have been stable in run-time for a while.
 // @ts-nocheck
 
-import Discord from 'discord.js';
-import RequestPromise from 'request-promise';
-import tough, { Cookie } from 'tough-cookie';
-import cheerio from 'cheerio';
-import config from 'config';
+import { Client } from 'discord.js';
+import * as RequestPromise from 'request-promise';
+import { Cookie } from 'tough-cookie';
+import * as cheerio from 'cheerio';
+import * as config from 'config';
 import { CookieJar } from 'request';
 
 let updateTimeoutId: NodeJS.Timeout;
@@ -75,7 +75,7 @@ function Player(args: Player) {
   this.lastTime = new Date();
 
   // TODO: Fix constructing the same function repeatedly for every Player instance
-  this.toLocaleString = function() {
+  this.toLocaleString = function () {
     return this.name + ' ' + this.ddrCode;
   };
 }
@@ -94,7 +94,7 @@ function playerIsVisible(player: Player, shop: Shop) {
   } else {
     return (
       shop?.eventMode ||
-      shop?.todaysPlayers.map(p => p.ddrCode).some(shopDdrCodes => shopDdrCodes.includes(adminPlayers)) ||
+      shop?.todaysPlayers.map((p) => p.ddrCode).some((shopDdrCodes) => shopDdrCodes.includes(adminPlayers)) ||
       visiblePlayers.includes(player.ddrCode)
     );
   }
@@ -129,7 +129,7 @@ function Cab(cookieValue: string) {
   this.players = [];
   this.newPlayers = [];
   this.cookieValue = cookieValue;
-  this.cookie = new tough.Cookie({
+  this.cookie = new Cookie({
     key: 'M573SSID',
     value: cookieValue,
     domain: 'p.eagate.573.jp',
@@ -192,7 +192,7 @@ function getRecentPlayers(shop: Shop): Array<string> {
   const currentTime = new Date();
   const playerStrings: Array<string> = [];
   // TODO: Use a reduce function
-  shop.todaysPlayers.forEach(function(player) {
+  shop.todaysPlayers.forEach(function (player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       if (playerIsHidden(player)) {
@@ -210,7 +210,7 @@ function getTodaysPlayers(shop) {
   const currentTime = new Date();
   const playerStrings = [];
   // TODO: Use a reduce function
-  shop.todaysPlayers.forEach(function(player) {
+  shop.todaysPlayers.forEach(function (player) {
     const firstTime = timeString(player.firstTime, player.loc.timeZone);
     const lastTime = timeString(player.lastTime, player.loc.timeZone);
     const timePlayed = timeDifferential(player.lastTime, player.firstTime);
@@ -226,15 +226,15 @@ function getTodaysPlayers(shop) {
 
 function tftiCheck(incomingPlayer: Player, locationId: string) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
-    getChannelsWithName('tfti').map(tftiChannel => {
-      const locationIdChannel = tftiChannel.guild.channels.find(c => c.name === locationId);
+    getChannelsWithName('tfti').map((tftiChannel) => {
+      const locationIdChannel = tftiChannel.guild.channels.find((c) => c.name === locationId);
       const locationIdString = locationIdChannel ? locationIdChannel.toString() : '#' + locationId;
 
-      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find(emoji => emoji.name === 'TFTI');
+      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find((emoji) => emoji.name === 'TFTI');
       const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${locationIdString}! ${tftiEmojiForThisGuild}`;
 
       console.info(`Sending message to ${tftiChannel.guild.name}/#tfti: ${tftiMessage}`);
-      tftiChannel.send(tftiMessage).then(message => {
+      tftiChannel.send(tftiMessage).then((message) => {
         message.react(tftiEmojiForThisGuild);
       });
     });
@@ -255,7 +255,7 @@ function reportNewPlayer(loc, incomingPlayer) {
 function reportNewPlayers(loc, players) {
   let playersToReport = [];
 
-  players.forEach(player => {
+  players.forEach((player) => {
     if (playerIsHidden(player)) {
     } else if (playerIsVisible(player, loc)) {
       playersToReport.push(`+ ${player.name.padEnd(8)} ${player.ddrCode}`);
@@ -285,7 +285,7 @@ function getInitialData(shop) {
 }
 
 function getInitialDataForCab({ cab, cabIndex, shop }) {
-  return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then(body => {
+  return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then((body) => {
     const $ = cheerio.load(body);
     const dancerRows = $('td.dancer_name').get().length;
     if (dancerRows === 0) {
@@ -295,7 +295,7 @@ function getInitialDataForCab({ cab, cabIndex, shop }) {
         `0 dancers found at ${shop.id} cab${cabIndex}. Restart the bot. username:` +
         $('#user_name .name_str')
           .get()
-          .map(n => $(n).text()) +
+          .map((n) => $(n).text()) +
         ' rival_list:' +
         $('table.tb_rival_list');
       console.error(error);
@@ -307,12 +307,8 @@ function getInitialDataForCab({ cab, cabIndex, shop }) {
     for (let dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) {
       // Get up to 7 dancers, but don't break if we have less than 20
       cab.players[dancerIndex] = new Player({
-        dancerName: $('td.dancer_name')
-          .eq(dancerIndex)
-          .text(),
-        ddrCode: $('td.code')
-          .eq(dancerIndex)
-          .text(),
+        dancerName: $('td.dancer_name').eq(dancerIndex).text(),
+        ddrCode: $('td.code').eq(dancerIndex).text(),
         loc: shop,
       });
       console.log(
@@ -336,7 +332,7 @@ function retrieveData(loc: Shop) {
 
   if (loc.numPlayersEachHour[nowReportTimeDiff - 1] < 0) {
     let numPlayersLastHour = 0;
-    loc.todaysPlayers.forEach(function(player) {
+    loc.todaysPlayers.forEach(function (player) {
       const timeSinceSeen = timeDifferential(now, player.lastTime);
       if (timeSinceSeen.minOnly <= 60) {
         numPlayersLastHour++;
@@ -397,7 +393,7 @@ function retrieveData(loc: Shop) {
 
   console.log('--> ' + loc.name + ': Retrieving data...');
   return loc.cabs.map((cab, cabIndex) => {
-    return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then(body => {
+    return RequestPromise({ jar: cab.cookiejar, uri: getUrl() }).then((body) => {
       const $ = cheerio.load(body);
       const dancerCount = $('td.dancer_name').length;
       if (dancerCount === 0) {
@@ -410,12 +406,8 @@ function retrieveData(loc: Shop) {
         const receivedPlayers = [];
         for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) {
           // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
-          const dancerName = $('td.dancer_name')
-            .eq(dancerIndex)
-            .text();
-          const ddrCode = $('td.code')
-            .eq(dancerIndex)
-            .text();
+          const dancerName = $('td.dancer_name').eq(dancerIndex).text();
+          const ddrCode = $('td.code').eq(dancerIndex).text();
           if (dancerName === '') {
             console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
             // TODO: If we find the dancerName for this ddrCode later on, then we should populate the dancerName.
@@ -439,7 +431,7 @@ function retrieveData(loc: Shop) {
 
 // Updates player lists using new data
 function updatePlayerList(loc: Shop) {
-  loc.cabs.forEach(function(cab, cabIndex) {
+  loc.cabs.forEach(function (cab, cabIndex) {
     if (!cab.players.length) {
       return;
     }
@@ -453,7 +445,7 @@ function updatePlayerList(loc: Shop) {
       const incomingPlayer = cab.newPlayers[0];
 
       // Check if the incomingPlayer already exists in cab.players.
-      const foundPlayer = cab.players.find(function(player) {
+      const foundPlayer = cab.players.find(function (player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
       console.log(`--> ${loc.name}: cab${cabIndex}.players before: ` + cab.players.toLocaleString());
@@ -476,7 +468,7 @@ function updatePlayerList(loc: Shop) {
       console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
       // Check if the incomingPlayer exists in loc.todaysPlayers.
-      const foundTodaysPlayer = loc.todaysPlayers.find(function(player) {
+      const foundTodaysPlayer = loc.todaysPlayers.find(function (player) {
         return player.ddrCode === incomingPlayer.ddrCode;
       });
 
@@ -504,10 +496,10 @@ function updatePlayerList(loc: Shop) {
       const incomingPlayer0 = cab.newPlayers[0];
       const incomingPlayer1 = cab.newPlayers[1];
 
-      const foundPlayer0 = cab.players.find(function(player) {
+      const foundPlayer0 = cab.players.find(function (player) {
         return player.ddrCode === incomingPlayer0.ddrCode;
       });
-      const foundPlayer1 = cab.players.find(function(player) {
+      const foundPlayer1 = cab.players.find(function (player) {
         return player.ddrCode === incomingPlayer1.ddrCode;
       });
 
@@ -536,10 +528,10 @@ function updatePlayerList(loc: Shop) {
       }
       console.log(`--> ${loc.name}: cab${cabIndex}.players after: ` + cab.players.toLocaleString());
 
-      const foundTodaysPlayer0 = loc.todaysPlayers.find(function(player) {
+      const foundTodaysPlayer0 = loc.todaysPlayers.find(function (player) {
         return player.ddrCode === incomingPlayer0.ddrCode;
       });
-      const foundTodaysPlayer1 = loc.todaysPlayers.find(function(player) {
+      const foundTodaysPlayer1 = loc.todaysPlayers.find(function (player) {
         return player.ddrCode === incomingPlayer1.ddrCode;
       });
 
@@ -568,7 +560,7 @@ function updatePlayerList(loc: Shop) {
 }
 
 function updatePlayerLists() {
-  return ALL_LOCATIONS.forEach(shop => {
+  return ALL_LOCATIONS.forEach((shop) => {
     return updatePlayerList(shop);
   });
 }
@@ -576,13 +568,13 @@ function updatePlayerLists() {
 // Removes players who move cabs
 function pruneData() {
   console.log('Pruning data. We should see this after we have retrieved all data.');
-  ALL_LOCATIONS.forEach(function(loc1) {
-    ALL_LOCATIONS.forEach(function(loc2) {
-      loc1.cabs.forEach(function(cab1) {
-        loc2.cabs.forEach(function(cab2) {
+  ALL_LOCATIONS.forEach(function (loc1) {
+    ALL_LOCATIONS.forEach(function (loc2) {
+      loc1.cabs.forEach(function (cab1) {
+        loc2.cabs.forEach(function (cab2) {
           if (cab1 !== cab2) {
-            cab1.newPlayers.forEach(function(newPlayer) {
-              let foundPlayer = cab2.players.find(function(player) {
+            cab1.newPlayers.forEach(function (newPlayer) {
+              let foundPlayer = cab2.players.find(function (player) {
                 return player.ddrCode === newPlayer.ddrCode;
               });
               if (foundPlayer) {
@@ -601,9 +593,9 @@ function pruneData() {
 }
 
 function update() {
-  const locationPromises = ALL_LOCATIONS.map(loc => {
+  const locationPromises = ALL_LOCATIONS.map((loc) => {
     const cabPromises = retrieveData(loc);
-    return Promise.all(cabPromises).catch(err => {
+    return Promise.all(cabPromises).catch((err) => {
       console.error(err, `${getUrl()} failed`);
     });
   });
@@ -619,14 +611,14 @@ function update() {
       console.log('update() loop complete'); // Ideally, this would run after the above processing is complete, by making nice batches of promises
       updateTimeoutId = setTimeout(update, REFRESH_INTERVAL);
     })
-    .catch(err => {
+    .catch((err) => {
       console.log(err);
       console.log('\n@@@@@\n--> Error detected in at least 1 cab. \n@@@@@\n');
     });
 }
 
 // Initialize Discord Bot
-const client = new Discord.Client();
+const client = new Client();
 
 client.on('ready', () => {
   console.log('Connected');
@@ -637,7 +629,7 @@ client.on('ready', () => {
 // Reused in a few places
 // Plus we have the same channel name on multiple guilds
 function getChannelsWithName(name) {
-  return client.channels.filter(channel => channel.name === name);
+  return client.channels.filter((channel) => channel.name === name);
 }
 
 function monospace(message) {
@@ -655,11 +647,11 @@ function pingChannelsForLocation(loc, message) {
   if (!channels.size) {
     console.error('Could not find channels for location ' + loc.id);
   } else {
-    channels.forEach(channel => pingChannel(channel, message));
+    channels.forEach((channel) => pingChannel(channel, message));
   }
 }
 function reportTodaysPlayers(loc) {
-  getChannelsWithName(loc.id).forEach(channel => reportTodaysPlayersForChannel(channel, loc));
+  getChannelsWithName(loc.id).forEach((channel) => reportTodaysPlayersForChannel(channel, loc));
 }
 
 // https://medium.com/@Dragonza/four-ways-to-chunk-an-array-e19c889eac4
@@ -679,7 +671,7 @@ function reportTodaysPlayersForChannel(channel, loc) {
   const s = todaysPlayers.length === 1 ? '' : 's';
   let message = `${todaysPlayers.length} player${s} ${today}`; // TODO: replace with YYYY-MM-DD
   // Instead of trying to compute the perfect string length <= 2000, just safely/simply cut off at 48 players per message.
-  chunk(todaysPlayers, 48).forEach(chunkOf48Players => {
+  chunk(todaysPlayers, 48).forEach((chunkOf48Players) => {
     message += monospace(chunkOf48Players.join('\n'));
     console.info(`Sending message to ${channel.guild.name}/#${channel.name}: ${message}`);
     channel.send(message);
@@ -690,7 +682,7 @@ function reportTodaysPlayersForChannel(channel, loc) {
     channel.send(message);
   }
 
-  if (todaysPlayers.length && loc.numPlayersEachHour.some(element => element > 0)) {
+  if (todaysPlayers.length && loc.numPlayersEachHour.some((element) => element > 0)) {
     const reportTime = new Date();
     if (loc.timeZone.startsWith('America') || loc.timeZone.indexOf('Honolulu') > -1) {
       reportTime.setUTCHours(usReportTime);
@@ -756,7 +748,7 @@ function summaryHereString(loc, { includeList = true } = {}) {
   let numActivePlayers = 0;
   const playerNamesTimes: string[] = [];
 
-  loc.todaysPlayers.forEach(function(player) {
+  loc.todaysPlayers.forEach(function (player) {
     const timeSinceSeen = timeDifferential(currentTime, player.lastTime);
     if (timeSinceSeen.minOnly <= RECENT_PLAYER_CUTOFF_MINUTES) {
       numActivePlayers++;
@@ -799,8 +791,8 @@ function summaryHereString(loc, { includeList = true } = {}) {
 function updateChannelTopic(loc, channel) {
   return channel
     .setTopic(summaryHereString(loc))
-    .then(updated => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
-    .catch(error => console.error('Failed to update ' + loc.id, error));
+    .then((updated) => console.log(`Updated topic in ${updated.guild.name}/#${loc.id}: ${updated.topic}`))
+    .catch((error) => console.error('Failed to update ' + loc.id, error));
 }
 
 function updateChannelsTopicForLocation(loc) {
@@ -808,19 +800,19 @@ function updateChannelsTopicForLocation(loc) {
   if (!channels.size) {
     console.error('Could not find channels for location ' + loc.id);
   } else {
-    return channels.forEach(channel => updateChannelTopic(loc, channel));
+    return channels.forEach((channel) => updateChannelTopic(loc, channel));
   }
 }
 
 function updateChannelTopics() {
-  return ALL_LOCATIONS.forEach(loc => {
+  return ALL_LOCATIONS.forEach((loc) => {
     return updateChannelsTopicForLocation(loc);
   });
 }
 
 client.on('error', console.error);
 
-client.on('message', message => {
+client.on('message', (message) => {
   if (message.content.substring(0, 1) == '!') {
     const args = message.content.split(' ');
     const cmd = args[0].substring(1);
@@ -833,17 +825,17 @@ client.on('message', message => {
     if (isAdmin) {
       if (cmd === 'yeet') {
         // TODO: Only reportTodaysPlayers to the server that the message came from.
-        return ALL_LOCATIONS.forEach(loc => reportTodaysPlayers(loc));
+        return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
       } else if (cmd === 'revealEverywhere') {
         channel.send('Dancer names will be revealed automatically for the rest of the day.');
-        return ALL_LOCATIONS.forEach(loc => (loc.eventMode = true));
+        return ALL_LOCATIONS.forEach((loc) => (loc.eventMode = true));
       } else if (cmd === 'hideEverywhere') {
         channel.send('Dancer-name-reveal behavior is now back to default.');
-        return ALL_LOCATIONS.forEach(loc => (loc.eventMode = false));
+        return ALL_LOCATIONS.forEach((loc) => (loc.eventMode = false));
       }
     }
 
-    const shop = ALL_LOCATIONS.find(shop => shop.id === channel.name);
+    const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
 
     if (!shop) {
       console.error('Could not find shop with id ' + channel.name);
@@ -879,19 +871,19 @@ client.on('message', message => {
           .then(() => {
             channel.send('Added');
           })
-          .catch(err => {
+          .catch((err) => {
             console.error('Failed to add cab', err);
           });
       } else if (cmd === 'removecab') {
         const cabIndex = args[1];
         console.log(
           'before remove',
-          shop.cabs.map(cab => cab.cookieValue)
+          shop.cabs.map((cab) => cab.cookieValue)
         );
         shop.cabs.splice(cabIndex, 1);
         console.log(
           'after remove',
-          shop.cabs.map(cab => cab.cookieValue)
+          shop.cabs.map((cab) => cab.cookieValue)
         );
         channel.send('Removed');
       } else if (cmd === 'addvisibleplayer') {
@@ -924,12 +916,12 @@ client.on('message', message => {
 
 // Initialize locations
 const CONFIG_LOCATIONS: Array<Shop> = config.get('shops') || [];
-const ALL_LOCATIONS: Array<Shop> = CONFIG_LOCATIONS.map(shop => {
+const ALL_LOCATIONS: Array<Shop> = CONFIG_LOCATIONS.map((shop) => {
   return new Location({
     name: shop.id,
     id: shop.id,
     timeZone: shop.timeZone,
-    cabs: shop.cookies.map(cookie => {
+    cabs: shop.cookies.map((cookie) => {
       return new Cab(cookie);
     }),
     eventMode: shop.eventMode,
@@ -939,15 +931,15 @@ const ALL_LOCATIONS: Array<Shop> = CONFIG_LOCATIONS.map(shop => {
 function getAllInitialData() {
   console.log('getAllInitialData');
 
-  const promises = ALL_LOCATIONS.map(loc => {
+  const promises = ALL_LOCATIONS.map((loc) => {
     return Promise.all(getInitialData(loc))
-      .catch(err => {
+      .catch((err) => {
         console.error(getUrl(), 'failed,', err, 'retrying', loc.id, getUrl());
         return Promise.all(getInitialData(loc))
           .then(() => {
             updateChannelsTopicForLocation(loc);
           })
-          .catch(err => {
+          .catch((err) => {
             const errorMessage = `Damn we failed on the retry, too. ${loc.id}`;
             console.error(errorMessage);
             throw new Error(errorMessage);
@@ -975,7 +967,7 @@ if (!DISCORD_BOT_TOKEN) {
 client
   .login(DISCORD_BOT_TOKEN)
   .then(getAllInitialData)
-  .catch(err => {
+  .catch((err) => {
     console.error('--> Failed to get initial data. Restart the bot.');
     process.exit();
     throw err;
