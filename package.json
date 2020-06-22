@@ -9,17 +9,17 @@
   },
   "author": "korisya",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.3",
-    "config": "^3.3.1",
-    "discord.js": "^11.6.4",
-    "request": "^2.88.2",
-    "request-promise": "^4.2.5",
-    "tough-cookie": "^2.5.0",
-    "typescript": "^3.9.2"
+    "cheerio": "*",
+    "config": "*",
+    "discord.js": "*",
+    "request": "*",
+    "request-promise": "*",
+    "tough-cookie": "*",
+    "typescript": "*"
   },
   "devDependencies": {
-    "@types/cheerio": "^0.22.18",
-    "@types/config": "0.0.36",
-    "@types/request-promise": "^4.1.46"
+    "@types/cheerio": "*",
+    "@types/config": "*",
+    "@types/request-promise": "*"
   }
 }

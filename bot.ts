@@ -234,15 +234,17 @@ function getTodaysPlayers(shop: Shop) {
 function tftiCheck(incomingPlayer: Player, locationId: string) {
   if (tftiPlayers.includes(incomingPlayer.ddrCode)) {
     getChannelsWithName('tfti').map((tftiChannel) => {
-      const locationIdChannel = tftiChannel.guild.channels.find((c) => c.name === locationId);
+      const locationIdChannel = tftiChannel.guild.channels.cache.find((c) => c.name === locationId);
       const locationIdString = locationIdChannel ? locationIdChannel.toString() : '#' + locationId;
 
-      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.find((emoji) => emoji.name === 'TFTI');
+      const tftiEmojiForThisGuild = tftiChannel.guild.emojis.cache.find((emoji) => emoji.name === 'TFTI');
       const tftiMessage = `${incomingPlayer.name} (${incomingPlayer.ddrCode}) was spotted at ${locationIdString}! ${tftiEmojiForThisGuild}`;
 
       console.info(`Sending message to ${tftiChannel.guild.name}/#tfti: ${tftiMessage}`);
       tftiChannel.send(tftiMessage).then((message) => {
-        message.react(tftiEmojiForThisGuild);
+        if (tftiEmojiForThisGuild) {
+          message.react(tftiEmojiForThisGuild);
+        }
       });
     });
   }
@@ -629,15 +631,15 @@ const client = new Discord.Client();
 
 client.on('ready', () => {
   console.log('Connected');
-  console.log(`Logged in as ${client.user.tag}!`);
-  console.log(client.user.username + ' - (' + client.user.id + ')');
+  console.log(`Logged in as ${client.user?.tag}!`);
+  console.log(client.user?.username + ' - (' + client.user?.id + ')');
 });
 
 // Reused in a few places
 // Plus we have the same channel name on multiple guilds
 function getChannelsWithName(name: string): Discord.Collection<string, Discord.TextChannel> {
   // Discord types aren't smart about checking type here, so cast to TextChannel after we've already checked for 'text'
-  const textChannels: Discord.Collection<string, Discord.TextChannel> = client.channels.filter(
+  const textChannels: Discord.Collection<string, Discord.TextChannel> = client.channels.cache.filter(
     (channel) => channel.type === 'text'
   ) as Discord.Collection<string, Discord.TextChannel>;
 
@@ -835,8 +837,10 @@ client.on('message', (message) => {
     const cmd = args[0].substring(1);
     console.info('Command ' + cmd + ' received from ' + message.author.tag);
 
-    // We know this is a text channel
-    const channel: Discord.TextChannel = message.channel as Discord.TextChannel;
+    const channel = message.channel;
+    if (channel.type !== 'text') {
+      return;
+    }
 
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
