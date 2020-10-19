@@ -448,6 +448,9 @@ function updatePlayerList(loc: Shop) {
     // Check if the previous first player shifted down a spot.
     // We assume this means that cab.newPlayers[0] contains a player who just finished a game.
     if (
+      cab.players[0]?.ddrCode &&
+      cab.newPlayers[0]?.ddrCode &&
+      cab.newPlayers[1]?.ddrCode &&
       cab.players[0]?.ddrCode !== cab.newPlayers[0]?.ddrCode &&
       cab.players[0]?.ddrCode === cab.newPlayers[1]?.ddrCode
     ) {
@@ -498,6 +501,9 @@ function updatePlayerList(loc: Shop) {
     // Check if the first two players are different in any way (other than the previous situation).
     // We assume that this means cab.newPlayers[0] and cab.newPlayers[1] both contain players who just finished a game together.
     else if (
+      cab.players[0]?.ddrCode &&
+      cab.newPlayers[0]?.ddrCode &&
+      cab.newPlayers[1]?.ddrCode &&
       !(
         cab.players[0]?.ddrCode === cab.newPlayers[0]?.ddrCode && cab.players[1]?.ddrCode === cab.newPlayers[1]?.ddrCode
       )
