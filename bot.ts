@@ -137,7 +137,7 @@ class Cab {
     this.cookiejar = RequestPromise.jar();
     this.prunedPlayers = 0;
 
-    this.cookiejar.setCookie(this.cookie, 'https://p.eagate.573.jp');
+    this.cookiejar.setCookie(this.cookie.toString(), 'https://p.eagate.573.jp');
   }
 }
 
