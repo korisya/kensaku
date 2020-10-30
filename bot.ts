@@ -1,10 +1,9 @@
 import * as Discord from 'discord.js';
-import * as RequestPromise from 'request-promise';
+import NodeFetch from 'node-fetch';
 import * as ToughCookie from 'tough-cookie';
 import * as cheerio from 'cheerio';
 // Don't use default import for config, it crashes on launch
 import * as config from 'config';
-import { CookieJar } from 'request';
 
 let updateTimeoutId: NodeJS.Timeout;
 
@@ -120,7 +119,6 @@ class Cab {
   newPlayers: Array<Player>;
   cookieValue: string;
   cookie: ToughCookie.Cookie;
-  cookiejar: CookieJar;
   prunedPlayers: number;
 
   constructor(cookieValue: string) {
@@ -134,10 +132,7 @@ class Cab {
       httpOnly: true,
       maxAge: 31536000,
     });
-    this.cookiejar = RequestPromise.jar();
     this.prunedPlayers = 0;
-
-    this.cookiejar.setCookie(this.cookie.toString(), 'https://p.eagate.573.jp');
   }
 }
 
@@ -293,38 +288,44 @@ function getInitialData(shop: Shop) {
   });
 }
 
-function getInitialDataForCab({ cab, cabIndex, shop }: { cab: Cab; cabIndex: number; shop: Shop }) {
-  return RequestPromise.get({ jar: cab.cookiejar, uri: getUrl() }).then((body: string) => {
-    const $ = cheerio.load(body);
-    const dancerRows = $('td.dancer_name').get().length;
-    if (dancerRows === 0) {
-      // Error state - we won't work here. Happens during maintenance.
-      // We have to restart.
-      const error =
-        `0 dancers found at ${shop.id} cab${cabIndex}. Restart the bot. username:` +
-        $('#user_name .name_str')
-          .get()
-          .map((n) => $(n).text()) +
-        ' rival_list:' +
-        $('table.tb_rival_list');
-      console.error(error);
-      throw new Error(error);
-    }
-
-    console.log(`getInitialData ${shop.id} @cab${cabIndex} found ${dancerRows} dancers:`);
-    // Parses data
-    for (let dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) {
-      // Get up to 7 dancers, but don't break if we have less than 20
-      cab.players[dancerIndex] = new Player({
-        dancerName: $('td.dancer_name').eq(dancerIndex).text(),
-        ddrCode: $('td.code').eq(dancerIndex).text(),
-        loc: shop,
-      });
-      console.log(
-        `--> ${shop.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString()
-      );
-    }
+async function getInitialDataForCab({ cab, cabIndex, shop }: { cab: Cab; cabIndex: number; shop: Shop }) {
+  const fetch = await NodeFetch(getUrl(), {
+    headers: {
+      cookie: cab.cookie.toString(),
+    },
   });
+
+  const body = await fetch.text();
+
+  const $ = cheerio.load(body);
+  const dancerRows = $('td.dancer_name').get().length;
+  if (dancerRows === 0) {
+    // Error state - we won't work here. Happens during maintenance.
+    // We have to restart.
+    const error =
+      `0 dancers found at ${shop.id} cab${cabIndex}. Restart the bot. username:` +
+      $('#user_name .name_str')
+        .get()
+        .map((n) => $(n).text()) +
+      ' rival_list:' +
+      $('table.tb_rival_list');
+    console.error(error);
+    throw new Error(error);
+  }
+
+  console.log(`getInitialData ${shop.id} @cab${cabIndex} found ${dancerRows} dancers:`);
+  // Parses data
+  for (let dancerIndex = 0; dancerIndex < Math.min(dancerRows, 7); dancerIndex++) {
+    // Get up to 7 dancers, but don't break if we have less than 20
+    cab.players[dancerIndex] = new Player({
+      dancerName: $('td.dancer_name').eq(dancerIndex).text(),
+      ddrCode: $('td.code').eq(dancerIndex).text(),
+      loc: shop,
+    });
+    console.log(
+      `--> ${shop.name} cab${cabIndex}: Player ${dancerIndex} received - ` + cab.players[dancerIndex].toLocaleString()
+    );
+  }
 }
 
 // Retrieves new data
@@ -401,40 +402,46 @@ function retrieveData(loc: Shop) {
   }
 
   console.log('--> ' + loc.name + ': Retrieving data...');
-  return loc.cabs.map((cab, cabIndex) => {
-    return RequestPromise.get({ jar: cab.cookiejar, uri: getUrl() }).then((body: string) => {
-      const $ = cheerio.load(body);
-      const dancerCount = $('td.dancer_name').length;
-      if (dancerCount === 0) {
-        const errorMessage =
-          `--> ${loc.name} @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ` +
-          loc.cabs[cabIndex].cookieValue;
-        console.error(errorMessage);
-        throw new Error(errorMessage);
-      } else {
-        const receivedPlayers = [];
-        for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) {
-          // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
-          const dancerName = $('td.dancer_name').eq(dancerIndex).text();
-          const ddrCode = $('td.code').eq(dancerIndex).text();
-          if (dancerName === '') {
-            console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
-            // TODO: If we find the dancerName for this ddrCode later on, then we should populate the dancerName.
-          }
-          receivedPlayers[dancerIndex] = new Player({
-            dancerName,
-            ddrCode,
-            loc,
-          });
-        }
-        console.log(`--> ${loc.name} @cab${cabIndex}: Data received >` + receivedPlayers.toLocaleString());
-
-        // Until we fix some logic, only put top 2 into loc.cabs.newPlayers
-        for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) {
-          loc.cabs[cabIndex].newPlayers[dancerIndex] = receivedPlayers[dancerIndex];
-        }
-      }
+  return loc.cabs.map(async (cab, cabIndex) => {
+    const fetch = await NodeFetch(getUrl(), {
+      headers: {
+        cookie: cab.cookie.toString(),
+      },
     });
+
+    const body = await fetch.text();
+
+    const $ = cheerio.load(body);
+    const dancerCount = $('td.dancer_name').length;
+    if (dancerCount === 0) {
+      const errorMessage =
+        `--> ${loc.name} @cab${cabIndex}: No dancers found. Is this cookie set up correctly? ` +
+        loc.cabs[cabIndex].cookieValue;
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+    } else {
+      const receivedPlayers = [];
+      for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 10); dancerIndex++) {
+        // Only receive up to 10 players for debugging. 20 is too long, but might still be useful for extended downtime with lots of players playing.
+        const dancerName = $('td.dancer_name').eq(dancerIndex).text();
+        const ddrCode = $('td.code').eq(dancerIndex).text();
+        if (dancerName === '') {
+          console.error(`--> ${loc.name} @cab${cabIndex}: Ghost ${ddrCode} appeared. Spooky af :monkaPrim:`);
+          // TODO: If we find the dancerName for this ddrCode later on, then we should populate the dancerName.
+        }
+        receivedPlayers[dancerIndex] = new Player({
+          dancerName,
+          ddrCode,
+          loc,
+        });
+      }
+      console.log(`--> ${loc.name} @cab${cabIndex}: Data received >` + receivedPlayers.toLocaleString());
+
+      // Until we fix some logic, only put top 2 into loc.cabs.newPlayers
+      for (let dancerIndex = 0; dancerIndex < Math.min(dancerCount, 2); dancerIndex++) {
+        loc.cabs[cabIndex].newPlayers[dancerIndex] = receivedPlayers[dancerIndex];
+      }
+    }
   });
 }
 

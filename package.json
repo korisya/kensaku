@@ -1,6 +1,6 @@
 {
   "name": "kensaku-bot",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "A DDR machine-tracking Discord bot.",
   "main": "bot.ts",
   "scripts": {
@@ -12,14 +12,14 @@
     "cheerio": "*",
     "config": "*",
     "discord.js": "*",
-    "request": "*",
-    "request-promise": "*",
+    "node-fetch": "*",
     "tough-cookie": "*",
     "typescript": "*"
   },
   "devDependencies": {
     "@types/cheerio": "*",
     "@types/config": "*",
-    "@types/request-promise": "*"
+    "@types/node-fetch": "*",
+    "@types/tough-cookie": "*"
   }
 }
