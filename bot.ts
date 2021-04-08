@@ -855,11 +855,12 @@ client.on('message', (message) => {
       return;
     }
 
+    const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
+
     const isAdmin = adminDiscordTags.includes(message.author.tag);
 
     if (isAdmin) {
-      if (cmd === 'yeet') {
-        // TODO: Only reportTodaysPlayers to the server that the message came from.
+      if (cmd === 'yeet' && shop) {
         return ALL_LOCATIONS.forEach((loc) => reportTodaysPlayers(loc));
       } else if (cmd === 'revealEverywhere') {
         channel.send('Dancer names will be revealed automatically for the rest of the day.');
@@ -869,8 +870,6 @@ client.on('message', (message) => {
         return ALL_LOCATIONS.forEach((loc) => (loc.eventMode = false));
       }
     }
-
-    const shop = ALL_LOCATIONS.find((shop) => shop.id === channel.name);
 
     if (!shop) {
       console.error('Could not find shop with id ' + channel.name);
